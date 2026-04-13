@@ -7,7 +7,7 @@ import { AlertCircle, Plus, Workflow } from "lucide-react";
 
 import { EmptyState, PremiumTableSkeleton, UXStateCard, WorkflowTable } from "@/components/system";
 import { Button } from "@/components/ui/button";
-import { useWorkflows } from "@/hooks/use-workflows";
+import { useWorkflowsQuery } from "@/hooks/api/use-domain-queries";
 import { getNextActionLabel } from "@/lib/workflow/display";
 import type { WorkflowStatus } from "@/types/api/domain";
 
@@ -20,7 +20,7 @@ function normalizeSearchValue(value: string) {
 export function WorkflowsOverview() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<WorkflowStatus | "all">("all");
-  const workflowsQuery = useWorkflows();
+  const workflowsQuery = useWorkflowsQuery();
 
   const filteredWorkflows = useMemo(() => {
     const workflows = workflowsQuery.data ?? [];

@@ -8,7 +8,7 @@ import { SystemBreadcrumb } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
-import { useHealthQuery } from "@/hooks/api/use-domain-api";
+import { useHealthQuery } from "@/hooks/api/use-domain-queries";
 import { cn } from "@/lib/utils";
 import { getRouteContext } from "@/lib/navigation";
 import { useUiStore } from "@/store/ui-store";

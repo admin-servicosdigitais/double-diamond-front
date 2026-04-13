@@ -7,7 +7,7 @@ import { AlertTriangle, Eye, FileCode2, FileText, PencilLine } from "lucide-reac
 import { AlertBanner, EmptyState, PremiumPageSkeleton, StatusPill, SystemBreadcrumb, SystemCard, UXStateCard } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-api";
+import { useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 import { getStageBlueprint, inferStageSummary, mergeStageWithBlueprint } from "@/lib/workflow/stages";
 import type { Artifact, StageOutput } from "@/types/api/domain";

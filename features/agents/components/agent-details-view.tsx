@@ -7,7 +7,7 @@ import { AlertCircle, ArrowLeft, ListTree } from "lucide-react";
 import { PremiumPageSkeleton, SystemCard, UXStateCard } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAgentQuery } from "@/hooks/api/use-domain-api";
+import { useAgentQuery } from "@/hooks/api/use-domain-queries";
 import type { Agent } from "@/types/api/domain";
 
 function toLabelList(value?: string[] | string) {

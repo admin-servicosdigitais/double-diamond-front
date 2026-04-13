@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { HumanApprovalDialog } from "@/features/workflows/components/human-approval-dialog";
-import { useApproveStageMutation, useNextStageMutation, useRunStageMutation, useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-api";
+import { useApproveStageMutation, useNextStageMutation, useRunStageMutation, useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, inferStageSummary, mergeStageWithBlueprint } from "@/lib/workflow/stages";
 import { cn } from "@/lib/utils";
@@ -116,8 +116,8 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   const canRun = Boolean(effectiveSelectedStage?.canRun ?? effectiveSelectedStage?.status === "not_started");
   const canApprove = Boolean(
     effectiveSelectedStage?.canApprove ??
-      effectiveSelectedStage?.status === "awaiting_human_approval" ||
-      effectiveSelectedStage?.status === "running",
+      (effectiveSelectedStage?.status === "awaiting_human_approval" ||
+        effectiveSelectedStage?.status === "running"),
   );
   const nextBlockedByApproval =
     effectiveSelectedStage?.status !== "approved" && justApprovedStage !== effectiveSelectedStage?.stage;

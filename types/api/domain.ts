@@ -42,14 +42,7 @@ export type StageStatus =
   | "completed"
   | "error";
 
-export type WorkflowStatus =
-  | "not_started"
-  | "running"
-  | "awaiting_human_approval"
-  | "approved"
-  | "blocked"
-  | "completed"
-  | "error";
+export type WorkflowStatus = StageStatus;
 
 export interface Artifact {
   name: string;

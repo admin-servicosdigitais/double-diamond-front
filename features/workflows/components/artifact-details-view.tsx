@@ -23,7 +23,7 @@ import {
   usePatchArtifactMutation,
   useStageOutputsQuery,
   useWorkflowQuery,
-} from "@/hooks/api/use-domain-api";
+} from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 
 function formatBytes(size?: number) {
