@@ -19,7 +19,7 @@ export function isStage8Optional(stage: number) {
 }
 
 export function canRunStage(stage: Stage) {
-  return stage.canRun ?? stage.status === "not_started" || stage.status === "error";
+  return stage.canRun ?? (stage.status === "not_started" || stage.status === "error");
 }
 
 export function canApproveStage(stage: Stage) {

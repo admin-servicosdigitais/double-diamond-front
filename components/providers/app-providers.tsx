@@ -12,7 +12,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <Toaster richColors position="top-right" />
+      <Toaster richColors position="top-right" toastOptions={{ className: "!rounded-xl !border !shadow-lg" }} />
     </QueryClientProvider>
   );
 }
