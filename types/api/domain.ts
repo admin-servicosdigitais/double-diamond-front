@@ -105,4 +105,5 @@ export interface StageActionResponse {
 export interface PatchArtifactPayload {
   content: string;
   mimeType?: string;
+  reason?: string;
 }
