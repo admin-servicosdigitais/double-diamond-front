@@ -25,8 +25,8 @@ export const statusConfig: Record<
   },
   awaiting_human_approval: {
     label: "Aguardando aprovação",
-    tone: "bg-amber-100 text-amber-800 border-amber-200",
-    dot: "bg-amber-500",
+    tone: "bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-950 border-amber-300 shadow-[0_0_0_1px_rgba(251,191,36,0.4)]",
+    dot: "bg-amber-600",
     icon: Clock3,
   },
   approved: {
@@ -37,8 +37,8 @@ export const statusConfig: Record<
   },
   blocked: {
     label: "Bloqueado",
-    tone: "bg-orange-100 text-orange-800 border-orange-200",
-    dot: "bg-orange-500",
+    tone: "bg-orange-100 text-orange-900 border-orange-300",
+    dot: "bg-orange-600",
     icon: Ban,
   },
   completed: {

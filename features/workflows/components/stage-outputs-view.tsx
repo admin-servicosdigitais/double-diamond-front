@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { AlertTriangle, Eye, FileCode2, FileText, PencilLine } from "lucide-react";
 
-import { AlertBanner, EmptyState, StatusPill, SystemBreadcrumb, SystemCard, SystemSkeleton } from "@/components/system";
+import { AlertBanner, EmptyState, PremiumPageSkeleton, StatusPill, SystemBreadcrumb, SystemCard, UXStateCard } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-api";
@@ -91,22 +91,16 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
   }, [outputsQuery.data]);
 
   if (workflowQuery.isLoading || outputsQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <SystemSkeleton className="h-24 w-full rounded-xl" />
-        <SystemSkeleton className="h-28 w-full rounded-xl" />
-        <SystemSkeleton className="h-48 w-full rounded-xl" />
-      </div>
-    );
+    return <PremiumPageSkeleton />;
   }
 
   if (workflowQuery.isError || outputsQuery.isError || !workflowQuery.data) {
     return (
-      <EmptyState
-        icon={AlertTriangle}
-        title="Erro ao carregar outputs"
-        description="Não foi possível obter os artefatos do estágio. Tente novamente em alguns instantes."
-        actionLabel="Tentar novamente"
+      <UXStateCard
+        kind="error"
+        title="Não conseguimos carregar os outputs deste estágio"
+        description="Recarregue para recuperar documentos, resumos e histórico de execução sem perder contexto."
+        actionLabel="Recarregar outputs"
         onAction={() => {
           workflowQuery.refetch();
           outputsQuery.refetch();
@@ -182,8 +176,8 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
       {documents.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="Sem outputs disponíveis"
-          description="Este estágio ainda não gerou artefatos em Markdown ou HTML para consulta."
+          title="Nenhum output publicado até agora"
+          description="Assim que a etapa for executada, os artefatos aparecerão aqui com prévia, tipo e acesso rápido para revisão."
         />
       ) : (
         <SystemCard

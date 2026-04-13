@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
 
 export function SystemSkeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-md bg-muted", className)} aria-hidden />;
+  return <div className={cn("animate-pulse rounded-md bg-gradient-to-r from-muted via-muted/70 to-muted", className)} aria-hidden />;
 }
 
 export function WorkflowListSkeleton() {
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 rounded-xl border p-4">
+      <SystemSkeleton className="h-5 w-56" />
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="rounded-lg border p-3">
           <SystemSkeleton className="h-4 w-1/3" />

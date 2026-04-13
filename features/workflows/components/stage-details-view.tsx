@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, Play, RotateCcw, SkipForward } from "lucide-react";
 
-import { AlertBanner, EmptyState, StatusPill, SystemBreadcrumb, SystemCard, SystemSkeleton, systemToast } from "@/components/system";
+import { AlertBanner, EmptyState, PremiumPageSkeleton, StatusPill, SystemBreadcrumb, SystemCard, SystemSkeleton, UXStateCard, systemToast } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HumanApprovalDialog } from "@/features/workflows/components/human-approval-dialog";
@@ -171,22 +171,16 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   };
 
   if (workflowQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <SystemSkeleton className="h-24 w-full rounded-xl" />
-        <SystemSkeleton className="h-44 w-full rounded-xl" />
-        <SystemSkeleton className="h-56 w-full rounded-xl" />
-      </div>
-    );
+    return <PremiumPageSkeleton />;
   }
 
   if (workflowQuery.isError || !workflow) {
     return (
-      <EmptyState
-        icon={AlertTriangle}
-        title="Falha ao carregar estágio"
-        description="Não foi possível carregar o contexto do estágio. Tente novamente."
-        actionLabel="Tentar novamente"
+      <UXStateCard
+        kind="error"
+        title="Não conseguimos carregar o contexto deste estágio"
+        description="Recarregue para recuperar histórico, dependências e ações seguras de execução."
+        actionLabel="Recarregar estágio"
         onAction={() => workflowQuery.refetch()}
       />
     );
@@ -229,10 +223,12 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
       </section>
 
       {awaitingHumanApproval ? (
-        <AlertBanner
-          tone="warning"
-          title="Pendência humana crítica"
-          description="Este estágio está aguardando aprovação humana. Sem essa decisão, o fluxo não avança com segurança."
+        <UXStateCard
+          kind="awaiting_human_approval"
+          title="Decisão humana pendente para liberar o fluxo"
+          description="Revise evidências, registre a decisão e só então avance. Este controle protege qualidade e governança."
+          actionLabel="Iniciar aprovação"
+          onAction={() => setConfirmAction("approve")}
         />
       ) : null}
 
@@ -285,10 +281,12 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
           <SystemCard title="Validações e bloqueios" description="Sinais que impedem execução segura e ação recomendada.">
             <div className="space-y-2">
               {stage.status === "blocked" ? (
-                <AlertBanner
-                  tone="critical"
-                  title="Bloqueio operacional"
-                  description="Existem dependências pendentes. Revise o estágio anterior e regularize os pré-requisitos."
+                <UXStateCard
+                  kind="blocked"
+                  title="Este estágio está bloqueado por dependências"
+                  description="Revise o estágio anterior, regularize os pré-requisitos e retome a execução para seguir com segurança."
+                  actionLabel="Voltar ao workflow"
+                  onAction={() => { window.location.href = `/workflows/${workflow.id}`; }}
                 />
               ) : null}
               {!stage8DependencyOk ? (
@@ -412,7 +410,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
       {awaitingHumanApproval ? (
         <p className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
           <Clock3 className="h-4 w-4" />
-          Pendência humana ativa: registre aprovação explícita para liberar o avanço.
+          Aguardando aprovação humana: sem esse registro o fluxo permanece bloqueado para avanço.
         </p>
       ) : null}
 
