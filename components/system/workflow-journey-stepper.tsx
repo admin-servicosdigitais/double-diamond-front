@@ -28,9 +28,9 @@ export function WorkflowJourneyStepper({ stages, selectedStage, onSelectStage }:
               variant="outline"
               onClick={() => onSelectStage(stage.stage)}
               className={cn(
-                "h-auto w-full flex-col items-start gap-2 rounded-xl border bg-card px-3 py-3 text-left",
-                isActive && "border-primary ring-2 ring-primary/20",
-                stage.status === "blocked" && "border-orange-400 bg-orange-50",
+                "h-auto w-full flex-col items-start gap-2 rounded-xl border bg-card/95 px-3 py-3 text-left shadow-sm",
+                isActive && "border-primary/40 ring-2 ring-primary/20",
+                stage.status === "blocked" && "border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30",
               )}
             >
               <div className="flex w-full items-center justify-between text-xs text-muted-foreground">

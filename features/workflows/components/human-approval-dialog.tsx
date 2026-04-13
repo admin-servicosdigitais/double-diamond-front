@@ -41,20 +41,22 @@ export function HumanApprovalDialog({
   if (!open) return null;
 
   const checklist = [
-    { label: "Resumo do estágio conferido", icon: ClipboardCheck, done: Boolean(stageSummary) },
-    { label: "Outputs relevantes revisados", icon: FileText, done: outputs.length > 0 },
-    { label: "Impactos e governança considerados", icon: ShieldCheck, done: true },
+    { label: "Resumo do estágio validado", icon: ClipboardCheck, done: Boolean(stageSummary) },
+    { label: "Outputs críticos revisados", icon: FileText, done: outputs.length > 0 },
+    { label: "Riscos e governança considerados", icon: ShieldCheck, done: true },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border-2 border-amber-500 bg-background p-5 shadow-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-amber-700">Aprovação humana obrigatória</p>
-        <h2 className="mt-1 text-xl font-semibold">Aprovar estágio {stageNumber}</h2>
-        <p className="text-sm text-muted-foreground">{stageName ?? "Sem nome"} • Status atual: {stageStatusLabel}</p>
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border bg-background p-5 shadow-2xl">
+        <div className="space-y-1 border-b pb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">Human approval gate</p>
+          <h2 className="text-xl font-semibold">Aprovar estágio {stageNumber}</h2>
+          <p className="text-sm text-muted-foreground">{stageName ?? "Sem nome"} • Status atual: {stageStatusLabel}</p>
+        </div>
 
-        <section className="mt-4 space-y-2 rounded-lg border bg-muted/20 p-3">
-          <p className="text-sm font-medium">Resumo do estágio</p>
+        <section className="mt-4 space-y-2 rounded-xl border bg-muted/20 p-3">
+          <p className="text-sm font-medium">Resumo executivo</p>
           <p className="text-sm text-muted-foreground">{stageSummary}</p>
         </section>
 
@@ -65,7 +67,7 @@ export function HumanApprovalDialog({
           ) : (
             <ul className="space-y-2">
               {outputs.slice(0, 6).map((artifact) => (
-                <li key={`${artifact.name}-${artifact.updatedAt}`} className="flex items-center justify-between rounded-lg border p-2 text-sm">
+                <li key={`${artifact.name}-${artifact.updatedAt}`} className="flex items-center justify-between rounded-lg border bg-background/80 p-2 text-sm">
                   <span>{artifact.name}</span>
                   <Badge variant="outline">{artifact.mimeType ?? "tipo não informado"}</Badge>
                 </li>
@@ -75,10 +77,10 @@ export function HumanApprovalDialog({
         </section>
 
         <section className="mt-4 space-y-2">
-          <p className="text-sm font-medium">Checklist de revisão</p>
+          <p className="text-sm font-medium">Checklist de validação</p>
           <ul className="space-y-2">
             {checklist.map((item) => (
-              <li key={item.label} className="flex items-center gap-2 rounded-lg border p-2 text-sm">
+              <li key={item.label} className="flex items-center gap-2 rounded-lg border bg-background/80 p-2 text-sm">
                 <item.icon className="h-4 w-4 text-emerald-600" />
                 <span>{item.label}</span>
                 {item.done ? <CheckCircle2 className="ml-auto h-4 w-4 text-emerald-600" /> : <Badge variant="secondary">Pendente</Badge>}
@@ -89,17 +91,17 @@ export function HumanApprovalDialog({
 
         <section className="mt-4 space-y-2">
           <label className="text-sm font-medium" htmlFor="approval-notes">
-            Observações do operador (opcional)
+            Observações (opcional)
           </label>
           <Textarea
             id="approval-notes"
-            placeholder="Registre racional da decisão, riscos aceitos ou ressalvas."
+            placeholder="Registre a justificativa da aprovação, riscos aceitos ou ressalvas para auditoria."
             value={notes}
             onChange={(event) => onNotesChange(event.target.value)}
           />
         </section>
 
-        <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
+        <label className="mt-4 flex items-start gap-2 rounded-xl border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4"
@@ -109,7 +111,7 @@ export function HumanApprovalDialog({
           <span>Revisei os artefatos e autorizo o avanço deste estágio.</span>
         </label>
 
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>
             Cancelar
           </Button>

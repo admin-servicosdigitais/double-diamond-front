@@ -168,7 +168,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
     }
 
     if (nextBlockedByApproval) {
-      systemToast.warning("Ação bloqueada", "A ação “Avançar para próximo estágio” só é liberada após aprovação do estágio atual.");
+      systemToast.warning("Ação bloqueada", "A ação “Avançar para próximo estágio” é liberada somente após aprovação humana do estágio atual.");
       return;
     }
 
@@ -224,8 +224,8 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   }
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-xl border bg-card p-4">
+    <div className="space-y-6">
+      <section className="rounded-xl border bg-card/95 p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Workflow</p>
@@ -241,7 +241,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
             </Button>
             <Link
               href={`/workflows/${workflow.id}/stages/${effectiveSelectedStage.stage}/outputs`}
-              className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "font-medium")}
             >
               Revisar outputs
             </Link>
@@ -337,7 +337,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
           </SystemCard>
         </div>
 
-        <SystemCard title="Próxima ação" description="Escolha a ação mais segura para avançar o workflow.">
+        <SystemCard title="Próxima ação" description="Priorize a ação principal e mantenha o fluxo com segurança operacional.">
           <div className="space-y-2">
             <Button className="w-full justify-start gap-2" onClick={runStage} disabled={!canRun || isMutating}>
               <Play className="h-4 w-4" />
@@ -352,7 +352,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
             </Link>
 
             {shouldShowApproveAction ? (
-              <Button className="w-full justify-start gap-2" variant="secondary" onClick={() => setApprovalOpen(true)} disabled={isMutating}>
+              <Button className="w-full justify-start gap-2" variant="outline" onClick={() => setApprovalOpen(true)} disabled={isMutating}>
                 <CheckCircle2 className="h-4 w-4" />
                 Aprovar estágio
               </Button>
