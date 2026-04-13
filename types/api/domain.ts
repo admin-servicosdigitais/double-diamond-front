@@ -20,6 +20,13 @@ export interface Agent {
   code: string;
   name: string;
   description?: string;
+  shortDescription?: string;
+  stage?: string;
+  model?: string;
+  role?: string;
+  input_from?: string[] | string;
+  output_templates?: string[] | string;
+  summary_format?: string;
   enabled?: boolean;
   capabilities?: string[];
   createdAt?: string;
