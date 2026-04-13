@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, type ReactNode, useMemo } from "react";
-import Link from "next/link";
+import { Fragment, type ReactNode, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Bot,
@@ -14,9 +14,16 @@ import {
 } from "lucide-react";
 
 import { EmptyState, SystemBreadcrumb, SystemCard, SystemSkeleton } from "@/components/system";
+import { systemToast } from "@/components/system/system-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useArtifactQuery, useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-api";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  useArtifactQuery,
+  usePatchArtifactMutation,
+  useStageOutputsQuery,
+  useWorkflowQuery,
+} from "@/hooks/api/use-domain-api";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 
 function formatBytes(size?: number) {
@@ -227,6 +234,7 @@ export function ArtifactDetailsView({
   stageId: string;
   artifactName: string;
 }) {
+  const router = useRouter();
   const decodedArtifactName = decodeURIComponent(artifactName);
   const stageNumber = Number(stageId);
   const safeStage = Number.isFinite(stageNumber) ? stageNumber : 1;
@@ -234,6 +242,14 @@ export function ArtifactDetailsView({
   const workflowQuery = useWorkflowQuery(workflowId);
   const outputsQuery = useStageOutputsQuery(workflowId, safeStage);
   const artifactQuery = useArtifactQuery(workflowId, safeStage, decodedArtifactName);
+  const patchArtifactMutation = usePatchArtifactMutation();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState("");
+  const [reason, setReason] = useState("");
+  const [showPreview, setShowPreview] = useState(true);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
+  const [humanEdited, setHumanEdited] = useState(false);
 
   const artifactOutput = useMemo(
     () =>
@@ -280,7 +296,89 @@ export function ArtifactDetailsView({
 
   const artifact = artifactQuery.data;
   const content = artifact.content ?? artifactOutput?.content ?? artifactOutput?.summary ?? "";
+  const hasUnsavedChanges = isEditing && (editedContent !== content || reason.trim().length > 0);
   const renderMode = detectRenderableMode(content, artifact.mimeType, artifact.name);
+  const previewMode = detectRenderableMode(editedContent, artifact.mimeType, artifact.name);
+  const shouldShowHumanEditedBadge = humanEdited || Boolean((artifact as { editedByHuman?: boolean }).editedByHuman);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedContent(content);
+    }
+  }, [content, isEditing]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const askForLeaveConfirmation = (action: () => void) => {
+    if (hasUnsavedChanges) {
+      setPendingLeaveAction(() => action);
+      setShowLeaveConfirm(true);
+      return;
+    }
+
+    action();
+  };
+
+  const confirmLeave = () => {
+    pendingLeaveAction?.();
+    setShowLeaveConfirm(false);
+    setPendingLeaveAction(null);
+  };
+
+  const cancelLeave = () => {
+    setShowLeaveConfirm(false);
+    setPendingLeaveAction(null);
+  };
+
+  const startEditing = () => {
+    setEditedContent(content);
+    setReason("");
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    askForLeaveConfirmation(() => {
+      setIsEditing(false);
+      setEditedContent(content);
+      setReason("");
+    });
+  };
+
+  const saveChanges = async ({ goBack }: { goBack: boolean }) => {
+    try {
+      await patchArtifactMutation.mutateAsync({
+        workflowId,
+        stage: safeStage,
+        artifactName: decodedArtifactName,
+        payload: {
+          content: editedContent,
+          ...(reason.trim() ? { reason: reason.trim() } : {}),
+        },
+      });
+
+      setHumanEdited(true);
+      setReason("");
+      setIsEditing(false);
+      systemToast.success("Artefato atualizado", "As alterações foram salvas com sucesso.");
+
+      if (goBack) {
+        router.push(`/workflows/${workflowId}/stages/${safeStage}/outputs`);
+      }
+    } catch (error) {
+      const description = error instanceof Error ? error.message : "Não foi possível salvar agora.";
+      systemToast.error("Falha ao salvar", description);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -303,9 +401,11 @@ export function ArtifactDetailsView({
               <Badge className="gap-1" variant="secondary">
                 <Bot className="h-3.5 w-3.5" /> Gerado por IA
               </Badge>
-              <Badge className="gap-1" variant="outline">
-                <UserCheck className="h-3.5 w-3.5" /> Editado por humano
-              </Badge>
+              {shouldShowHumanEditedBadge ? (
+                <Badge className="gap-1" variant="outline">
+                  <UserCheck className="h-3.5 w-3.5" /> Editado por humano
+                </Badge>
+              ) : null}
               <Badge className="gap-1 border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Aprovado
               </Badge>
@@ -313,70 +413,168 @@ export function ArtifactDetailsView({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-            <Button className="gap-1" size="sm">
-              <PencilLine className="h-4 w-4" /> Editar artefato
-            </Button>
-            <Link href={`/workflows/${workflowId}/stages/${safeStage}/outputs`}>
-              <Button className="gap-1" size="sm" variant="outline">
+            {!isEditing ? (
+              <Button className="gap-1" size="sm" onClick={startEditing}>
+                <PencilLine className="h-4 w-4" /> Editar artefato
+              </Button>
+            ) : (
+              <>
+                <Button
+                  className="gap-1"
+                  size="sm"
+                  onClick={() => saveChanges({ goBack: false })}
+                  disabled={patchArtifactMutation.isPending || !editedContent.trim()}
+                >
+                  Salvar alterações
+                </Button>
+                <Button className="gap-1" size="sm" variant="secondary" onClick={cancelEditing} disabled={patchArtifactMutation.isPending}>
+                  Cancelar
+                </Button>
+                <Button
+                  className="gap-1"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => saveChanges({ goBack: true })}
+                  disabled={patchArtifactMutation.isPending || !editedContent.trim()}
+                >
+                  Salvar e voltar
+                </Button>
+              </>
+            )}
+            <Button
+              className="gap-1"
+              size="sm"
+              variant="outline"
+              onClick={() => askForLeaveConfirmation(() => router.push(`/workflows/${workflowId}/stages/${safeStage}/outputs`))}
+            >
                 <FileText className="h-4 w-4" /> Voltar aos outputs
-              </Button>
-            </Link>
-            <Link href={`/workflows/${workflowId}/stages/${safeStage}`}>
-              <Button className="gap-1" size="sm" variant="outline">
+            </Button>
+            <Button
+              className="gap-1"
+              size="sm"
+              variant="outline"
+              onClick={() => askForLeaveConfirmation(() => router.push(`/workflows/${workflowId}/stages/${safeStage}`))}
+            >
                 <Clock3 className="h-4 w-4" /> Voltar ao estágio
-              </Button>
-            </Link>
+            </Button>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.9fr_0.85fr]">
-        <SystemCard title="Conteúdo" description="Leitura confortável e revisão focada no artefato.">
-          {!content ? (
-            <p className="text-sm text-muted-foreground">Sem conteúdo textual disponível para exibição.</p>
-          ) : renderMode === "markdown" ? (
-            <MarkdownViewer content={content} />
-          ) : renderMode === "html" ? (
-            <div className="space-y-3">
-              <p className="text-xs text-muted-foreground">Renderização simplificada indisponível. Exibindo visualizador textual formatado.</p>
+      <div className={`grid gap-4 ${isEditing ? "xl:grid-cols-[2fr_1.15fr]" : "xl:grid-cols-[1.9fr_0.85fr]"}`}>
+        <SystemCard title={isEditing ? "Editar conteúdo" : "Conteúdo"} description="Leitura confortável e revisão focada no artefato.">
+          {!isEditing ? (
+            !content ? (
+              <p className="text-sm text-muted-foreground">Sem conteúdo textual disponível para exibição.</p>
+            ) : renderMode === "markdown" ? (
+              <MarkdownViewer content={content} />
+            ) : renderMode === "html" ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Renderização simplificada indisponível. Exibindo visualizador textual formatado.
+                </p>
+                <TextViewer content={content} />
+              </div>
+            ) : (
               <TextViewer content={content} />
-            </div>
+            )
           ) : (
-            <TextViewer content={content} />
+            <div className="space-y-4">
+              <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                Você está editando um artefato gerado por IA. Esta alteração será considerada na revisão humana.
+              </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Conteúdo do artefato</label>
+                <Textarea
+                  value={editedContent}
+                  onChange={(event) => setEditedContent(event.target.value)}
+                  className="min-h-[320px] font-mono text-sm"
+                  placeholder="Edite o conteúdo aqui..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Motivo da alteração (opcional)</label>
+                <Textarea
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  className="min-h-[100px]"
+                  placeholder="Explique o motivo da mudança para facilitar a revisão humana."
+                />
+              </div>
+              {patchArtifactMutation.isPending ? (
+                <p className="text-sm text-muted-foreground">Salvando alterações...</p>
+              ) : null}
+            </div>
           )}
         </SystemCard>
 
         <SystemCard title="Metadados" description="Contexto útil, porém secundário à leitura.">
-          <dl className="space-y-3 text-sm">
-            <div className="rounded-lg border p-3">
-              <dt className="text-xs text-muted-foreground">Nome do arquivo</dt>
-              <dd className="font-medium">{artifact.name}</dd>
+          {!isEditing ? (
+            <dl className="space-y-3 text-sm">
+              <div className="rounded-lg border p-3">
+                <dt className="text-xs text-muted-foreground">Nome do arquivo</dt>
+                <dd className="font-medium">{artifact.name}</dd>
+              </div>
+              <div className="rounded-lg border p-3">
+                <dt className="text-xs text-muted-foreground">Tipo</dt>
+                <dd>{artifact.mimeType ?? "text/markdown (inferido)"}</dd>
+              </div>
+              <div className="rounded-lg border p-3">
+                <dt className="text-xs text-muted-foreground">Tamanho</dt>
+                <dd>{formatBytes(artifact.size)}</dd>
+              </div>
+              <div className="rounded-lg border p-3">
+                <dt className="text-xs text-muted-foreground">Atualizado em</dt>
+                <dd>{formatWorkflowDate(artifact.updatedAt ?? artifactOutput?.updatedAt ?? artifactOutput?.createdAt)}</dd>
+              </div>
+              <div className="rounded-lg border p-3">
+                <dt className="text-xs text-muted-foreground">Agente</dt>
+                <dd>{artifactOutput?.agentCode ?? "n/d"}</dd>
+              </div>
+              <div className="rounded-lg border p-3">
+                <dt className="text-xs text-muted-foreground">Modo de visualização</dt>
+                <dd className="flex items-center gap-1">
+                  <FileCode2 className="h-3.5 w-3.5" /> {renderMode === "markdown" ? "Markdown rico" : "Texto formatado"}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={showPreview} onChange={(event) => setShowPreview(event.target.checked)} />
+                Mostrar preview lado a lado (desktop)
+              </label>
+              {showPreview ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Preview</p>
+                  <div className="max-h-[500px] overflow-auto rounded-lg border p-3">
+                    {previewMode === "markdown" ? <MarkdownViewer content={editedContent} /> : <TextViewer content={editedContent} />}
+                  </div>
+                </div>
+              ) : null}
             </div>
-            <div className="rounded-lg border p-3">
-              <dt className="text-xs text-muted-foreground">Tipo</dt>
-              <dd>{artifact.mimeType ?? "text/markdown (inferido)"}</dd>
-            </div>
-            <div className="rounded-lg border p-3">
-              <dt className="text-xs text-muted-foreground">Tamanho</dt>
-              <dd>{formatBytes(artifact.size)}</dd>
-            </div>
-            <div className="rounded-lg border p-3">
-              <dt className="text-xs text-muted-foreground">Atualizado em</dt>
-              <dd>{formatWorkflowDate(artifact.updatedAt ?? artifactOutput?.updatedAt ?? artifactOutput?.createdAt)}</dd>
-            </div>
-            <div className="rounded-lg border p-3">
-              <dt className="text-xs text-muted-foreground">Agente</dt>
-              <dd>{artifactOutput?.agentCode ?? "n/d"}</dd>
-            </div>
-            <div className="rounded-lg border p-3">
-              <dt className="text-xs text-muted-foreground">Modo de visualização</dt>
-              <dd className="flex items-center gap-1">
-                <FileCode2 className="h-3.5 w-3.5" /> {renderMode === "markdown" ? "Markdown rico" : "Texto formatado"}
-              </dd>
-            </div>
-          </dl>
+          )}
         </SystemCard>
       </div>
+
+      {showLeaveConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border bg-background p-4 shadow-xl">
+            <h2 className="text-lg font-semibold">Descartar alterações não salvas?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Você possui mudanças não salvas. Se sair agora, essas alterações serão perdidas.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={cancelLeave}>
+                Continuar editando
+              </Button>
+              <Button variant="destructive" onClick={confirmLeave}>
+                Sair sem salvar
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
