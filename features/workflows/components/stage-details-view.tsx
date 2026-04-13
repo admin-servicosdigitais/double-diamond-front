@@ -16,7 +16,7 @@ import {
   useWorkflowQuery,
 } from "@/hooks/api/use-domain-api";
 import { formatWorkflowDate } from "@/lib/workflow/display";
-import { getStageBlueprint, mergeStageWithBlueprint } from "@/lib/workflow/stages";
+import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, mergeStageWithBlueprint } from "@/lib/workflow/stages";
 import type { Stage } from "@/types/api/domain";
 
 type ConfirmAction = "approve" | "advance" | "rerun" | null;
@@ -88,6 +88,11 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   const workflow = workflowQuery.data;
   const stage = useMemo(() => (workflow ? getStageFromWorkflow(workflow.stages, stageNumber) : undefined), [workflow, stageNumber]);
   const stage7 = useMemo(() => (workflow ? getStageFromWorkflow(workflow.stages, 7) : undefined), [workflow]);
+  const hasNextStage = useMemo(() => {
+    if (!stage) return false;
+    const highestStage = WORKFLOW_STAGE_BLUEPRINTS[WORKFLOW_STAGE_BLUEPRINTS.length - 1]?.stage ?? stage.stage;
+    return stage.stage < highestStage;
+  }, [stage]);
 
   const stageOutputsQuery = useStageOutputsQuery(workflowId, Number.isFinite(stageNumber) ? stageNumber : 1);
   const latestOutput = stageOutputsQuery.data?.[0];
@@ -139,9 +144,20 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
 
   const advanceStage = async () => {
     if (!stage) return;
+    if (!hasNextStage) {
+      systemToast.warning("Fim do fluxo", "Não existe próximo estágio para este workflow.");
+      return;
+    }
+
+    if (!canAdvance) {
+      systemToast.warning("Ação bloqueada", "A ação “Avançar para próximo estágio” exige aprovação do estágio atual.");
+      return;
+    }
+
     try {
-      await nextStageMutation.mutateAsync({ workflowId, stage: stage.stage, currentStage: stage });
-      systemToast.success("Workflow avançado", "Próximo estágio liberado com sucesso.");
+      const nextStageResponse = await nextStageMutation.mutateAsync({ workflowId, stage: stage.stage, currentStage: stage });
+      const nextStageNumber = nextStageResponse.stage > stage.stage ? nextStageResponse.stage : stage.stage + 1;
+      systemToast.success("Workflow avançado", `Fluxo avançado com sucesso. Estágio ${nextStageNumber} agora está ativo.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha ao avançar workflow.";
       systemToast.error("Erro ao avançar", message);
@@ -331,11 +347,23 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
               className="w-full justify-start gap-2"
               variant="default"
               onClick={() => setConfirmAction("advance")}
-              disabled={!canAdvance || isMutating || !stage8DependencyOk}
+              disabled={!canAdvance || isMutating || !stage8DependencyOk || !hasNextStage}
             >
               <SkipForward className="h-4 w-4" />
-              Avançar
+              Avançar para próximo estágio
             </Button>
+
+            {!canAdvance ? (
+              <p className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+                Bloqueado: este estágio ainda não foi aprovado.
+              </p>
+            ) : null}
+
+            {!hasNextStage ? (
+              <p className="rounded-lg border border-slate-300 bg-slate-50 p-2 text-xs text-slate-700">
+                Este workflow já está no último estágio disponível.
+              </p>
+            ) : null}
           </div>
         </SystemCard>
       </div>
