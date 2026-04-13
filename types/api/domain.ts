@@ -66,6 +66,7 @@ export interface StageOutput {
 
 export interface Stage {
   stage: number;
+  stageKey?: string;
   name?: string;
   status: StageStatus;
   optional?: boolean;
@@ -90,9 +91,9 @@ export interface Workflow {
 }
 
 export interface CreateWorkflowPayload {
-  name: string;
-  description?: string;
-  input?: Record<string, unknown>;
+  workflow_id: string;
+  words: string[];
+  name?: string;
 }
 
 export interface StageActionResponse {
