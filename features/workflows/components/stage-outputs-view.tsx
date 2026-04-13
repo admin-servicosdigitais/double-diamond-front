@@ -122,7 +122,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
   const stageBlueprint = getStageBlueprint(stageNumber);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <SystemBreadcrumb
         items={[
           { label: "Dashboard", href: "/dashboard" },
@@ -133,13 +133,13 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
         ]}
       />
 
-      <section className="rounded-xl border bg-card p-4">
+      <section className="rounded-xl border bg-card/95 p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Catálogo de documentos</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">Output hub</p>
             <h1 className="text-2xl font-semibold">Outputs do estágio {stage.stage}</h1>
             <p className="text-sm text-muted-foreground">
-              {stageBlueprint?.description ?? "Acompanhe, revise e acesse os artefatos produzidos nesta etapa."}
+              {stageBlueprint?.description ?? "Revise os artefatos do estágio com foco em velocidade, contexto e decisão segura."}
             </p>
           </div>
           <StatusPill status={stage.status} />
@@ -148,19 +148,19 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
 
       <SystemCard title="Resumo do estágio" description="Contexto operacional para revisar artefatos com rapidez.">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border p-3">
+          <div className="rounded-lg border bg-background/70 p-3">
             <p className="text-xs text-muted-foreground">Status</p>
             <p className="text-sm font-medium">{inferStageSummary(stage.status)}</p>
           </div>
-          <div className="rounded-lg border p-3">
+          <div className="rounded-lg border bg-background/70 p-3">
             <p className="text-xs text-muted-foreground">Última atualização</p>
             <p className="text-sm font-medium">{formatWorkflowDate(stage.finishedAt ?? stage.startedAt)}</p>
           </div>
-          <div className="rounded-lg border p-3">
+          <div className="rounded-lg border bg-background/70 p-3">
             <p className="text-xs text-muted-foreground">Outputs da etapa</p>
             <p className="text-sm font-medium">{outputsQuery.data?.length ?? 0} execuções</p>
           </div>
-          <div className="rounded-lg border p-3">
+          <div className="rounded-lg border bg-background/70 p-3">
             <p className="text-xs text-muted-foreground">Artefatos elegíveis</p>
             <p className="text-sm font-medium">{documents.length} documentos</p>
           </div>
@@ -182,7 +182,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
       ) : (
         <SystemCard
           title="Lista de outputs"
-          description="Documentos apresentados com contexto para navegação rápida e revisão segura."
+          description="Lista priorizada para leitura rápida, validação humana e ação imediata."
         >
           <div className="grid gap-3">
             {documents.map((document) => {
@@ -192,7 +192,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
               const isHtml = document.typeLabel === "HTML";
 
               return (
-                <article key={document.key} className="rounded-xl border bg-background/60 p-4 shadow-sm transition hover:shadow-md">
+                <article key={document.key} className="rounded-xl border bg-background p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -204,7 +204,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
 
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{document.typeLabel}</Badge>
-                      <Badge variant="outline">Categoria: {document.category}</Badge>
+                      <Badge variant="outline">Categoria · {document.category}</Badge>
                       <Badge variant="outline">{reviewStatus}</Badge>
                     </div>
                   </div>
@@ -212,11 +212,11 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-xs text-muted-foreground">
                     <div className="flex flex-wrap items-center gap-3">
                       <span>Atualizado: {updatedAt}</span>
-                      <span>Agent: {document.output.agentCode ?? "n/d"}</span>
+                      <span>Agente: {document.output.agentCode ?? "n/d"}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Link href={`/workflows/${workflowId}/stages/${stage.stage}/outputs/${artifactName}`}>
-                        <Button size="sm" variant="outline" className="gap-1">
+                        <Button size="sm" variant="secondary" className="gap-1">
                           <Eye className="h-3.5 w-3.5" /> Abrir
                         </Button>
                       </Link>
@@ -237,7 +237,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
       <AlertBanner
         tone="info"
         title="Preparado para latest output por agent_code"
-        description={`Estrutura de agrupamento ativa para ${latestOutputByAgentCode.size} agent_code(s), pronta para expandir o modo \"latest por agente\".`}
+        description={`Base de agrupamento ativa para ${latestOutputByAgentCode.size} agent_code(s), pronta para expandir o modo \"latest por agente\".`}
       />
     </div>
   );

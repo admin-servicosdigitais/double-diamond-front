@@ -381,7 +381,7 @@ export function ArtifactDetailsView({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <SystemBreadcrumb
         items={[
           { label: "Dashboard", href: "/dashboard" },
@@ -393,7 +393,7 @@ export function ArtifactDetailsView({
         ]}
       />
 
-      <section className="rounded-xl border bg-card p-5">
+      <section className="rounded-xl border bg-card/95 p-5 shadow-sm">
         <div className="space-y-4">
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold tracking-tight">{decodedArtifactName}</h1>
@@ -415,7 +415,7 @@ export function ArtifactDetailsView({
           <div className="flex flex-wrap items-center gap-2 border-t pt-4">
             {!isEditing ? (
               <Button className="gap-1" size="sm" onClick={startEditing}>
-                <PencilLine className="h-4 w-4" /> Editar artefato
+                <PencilLine className="h-4 w-4" /> Editar conteúdo
               </Button>
             ) : (
               <>
@@ -425,7 +425,7 @@ export function ArtifactDetailsView({
                   onClick={() => saveChanges({ goBack: false })}
                   disabled={patchArtifactMutation.isPending || !editedContent.trim()}
                 >
-                  Salvar alterações
+                  Salvar
                 </Button>
                 <Button className="gap-1" size="sm" variant="secondary" onClick={cancelEditing} disabled={patchArtifactMutation.isPending}>
                   Cancelar
@@ -437,7 +437,7 @@ export function ArtifactDetailsView({
                   onClick={() => saveChanges({ goBack: true })}
                   disabled={patchArtifactMutation.isPending || !editedContent.trim()}
                 >
-                  Salvar e voltar
+                  Salvar e voltar à lista
                 </Button>
               </>
             )}
@@ -447,7 +447,7 @@ export function ArtifactDetailsView({
               variant="outline"
               onClick={() => askForLeaveConfirmation(() => router.push(`/workflows/${workflowId}/stages/${safeStage}/outputs`))}
             >
-                <FileText className="h-4 w-4" /> Voltar aos outputs
+                <FileText className="h-4 w-4" /> Voltar para outputs
             </Button>
             <Button
               className="gap-1"
@@ -455,14 +455,14 @@ export function ArtifactDetailsView({
               variant="outline"
               onClick={() => askForLeaveConfirmation(() => router.push(`/workflows/${workflowId}/stages/${safeStage}`))}
             >
-                <Clock3 className="h-4 w-4" /> Voltar ao estágio
+                <Clock3 className="h-4 w-4" /> Voltar para estágio
             </Button>
           </div>
         </div>
       </section>
 
       <div className={`grid gap-4 ${isEditing ? "xl:grid-cols-[2fr_1.15fr]" : "xl:grid-cols-[1.9fr_0.85fr]"}`}>
-        <SystemCard title={isEditing ? "Editar conteúdo" : "Conteúdo"} description="Leitura confortável e revisão focada no artefato.">
+        <SystemCard title={isEditing ? "Editar conteúdo" : "Conteúdo"} description="Leitura premium com foco em clareza, contexto e revisão humana.">
           {!isEditing ? (
             !content ? (
               <p className="text-sm text-muted-foreground">Sem conteúdo textual disponível para exibição.</p>
@@ -471,7 +471,7 @@ export function ArtifactDetailsView({
             ) : renderMode === "html" ? (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  Renderização simplificada indisponível. Exibindo visualizador textual formatado.
+                  Renderização HTML simplificada indisponível. Exibindo conteúdo em modo texto seguro.
                 </p>
                 <TextViewer content={content} />
               </div>
@@ -481,7 +481,7 @@ export function ArtifactDetailsView({
           ) : (
             <div className="space-y-4">
               <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-                Você está editando um artefato gerado por IA. Esta alteração será considerada na revisão humana.
+                Você está editando um artefato gerado por IA. Suas alterações entram no histórico para rastreabilidade humana.
               </p>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Conteúdo do artefato</label>
@@ -493,12 +493,12 @@ export function ArtifactDetailsView({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Motivo da alteração (opcional)</label>
+                <label className="text-sm font-medium">Contexto da alteração (opcional)</label>
                 <Textarea
                   value={reason}
                   onChange={(event) => setReason(event.target.value)}
                   className="min-h-[100px]"
-                  placeholder="Explique o motivo da mudança para facilitar a revisão humana."
+                  placeholder="Descreva o porquê da mudança para facilitar governança, auditoria e handoff."
                 />
               </div>
               {patchArtifactMutation.isPending ? (
@@ -508,7 +508,7 @@ export function ArtifactDetailsView({
           )}
         </SystemCard>
 
-        <SystemCard title="Metadados" description="Contexto útil, porém secundário à leitura.">
+        <SystemCard title="Metadados" description="Metadados para auditoria e contexto operacional.">
           {!isEditing ? (
             <dl className="space-y-3 text-sm">
               <div className="rounded-lg border p-3">
@@ -560,7 +560,7 @@ export function ArtifactDetailsView({
       {showLeaveConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border bg-background p-4 shadow-xl">
-            <h2 className="text-lg font-semibold">Descartar alterações não salvas?</h2>
+            <h2 className="text-lg font-semibold">Descartar mudanças não salvas?</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Você possui mudanças não salvas. Se sair agora, essas alterações serão perdidas.
             </p>

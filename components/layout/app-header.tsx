@@ -66,8 +66,8 @@ export function AppHeader() {
   const IndicatorIcon = indicator.icon;
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+    <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur-lg">
+      <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Button variant="outline" size="icon" onClick={toggleSidebar} aria-label="Alternar barra lateral">
             <PanelLeft className="h-4 w-4" />
@@ -79,9 +79,9 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="group relative hidden sm:block">
+          <div className="group relative hidden md:block">
             <Link href="/health">
-              <Badge variant="outline" className={cn("cursor-pointer items-center gap-2 border text-xs", indicator.className)}>
+              <Badge variant="outline" className={cn("cursor-pointer items-center gap-1.5 border text-xs", indicator.className)}>
                 <span className={cn("h-2 w-2 rounded-full", indicator.dotClassName)} aria-hidden />
                 <IndicatorIcon className="h-3.5 w-3.5" />
                 {indicator.label}
@@ -100,7 +100,7 @@ export function AppHeader() {
             <Link
               key={action.label}
               href={action.href}
-              className={cn(buttonVariants({ variant: action.variant ?? "default", size: "sm" }), "hidden lg:inline-flex")}
+              className={cn(buttonVariants({ variant: action.variant ?? "default", size: "sm" }), "hidden xl:inline-flex")}
             >
               {action.label}
             </Link>
