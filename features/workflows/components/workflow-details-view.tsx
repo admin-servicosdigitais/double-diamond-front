@@ -119,6 +119,9 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   );
   const nextBlockedByApproval =
     effectiveSelectedStage?.status !== "approved" && justApprovedStage !== effectiveSelectedStage?.stage;
+  const stageIndex = stages.findIndex((item) => item.stage === effectiveSelectedStage?.stage);
+  const nextStageCandidate = stageIndex >= 0 ? stages[stageIndex + 1] : undefined;
+  const hasNextStage = Boolean(nextStageCandidate);
   const shouldShowApproveAction = Boolean(
     canApprove &&
       (effectiveSelectedStage?.status === "awaiting_human_approval" ||
@@ -157,19 +160,35 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
 
   const nextStage = async () => {
     if (!effectiveSelectedStage) return;
+    if (!hasNextStage) {
+      systemToast.warning("Fim do fluxo", "Não existe próximo estágio para este workflow.");
+      return;
+    }
+
     if (nextBlockedByApproval) {
-      systemToast.warning("Ação bloqueada", "A ação de avançar só fica disponível após aprovação humana do estágio.");
+      systemToast.warning("Ação bloqueada", "A ação “Avançar para próximo estágio” só é liberada após aprovação do estágio atual.");
       return;
     }
 
     try {
-      await nextStageMutation.mutateAsync({
+      const nextStageResponse = await nextStageMutation.mutateAsync({
         workflowId,
         stage: effectiveSelectedStage.stage,
         currentStage: effectiveSelectedStage,
       });
 
-      systemToast.success("Workflow avançado", "Próximo estágio liberado com sucesso.");
+      const fallbackNextStage = nextStageCandidate?.stage;
+      const nextStageFromApi = nextStageResponse.stage > effectiveSelectedStage.stage ? nextStageResponse.stage : fallbackNextStage;
+      if (nextStageFromApi) {
+        setSelectedStageNumber(nextStageFromApi);
+      }
+
+      systemToast.success(
+        "Workflow avançado",
+        nextStageFromApi
+          ? `Fluxo avançado com sucesso. Estágio ${nextStageFromApi} agora está ativo.`
+          : "Fluxo avançado com sucesso.",
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível avançar o workflow agora.";
       systemToast.error("Erro ao avançar", message);
@@ -343,9 +362,14 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
               </Button>
             ) : null}
 
-            <Button className="w-full justify-start gap-2" variant="default" onClick={nextStage} disabled={nextBlockedByApproval || isMutating}>
+            <Button
+              className="w-full justify-start gap-2"
+              variant="default"
+              onClick={nextStage}
+              disabled={nextBlockedByApproval || isMutating || !hasNextStage}
+            >
               <SkipForward className="h-4 w-4" />
-              Avançar para próximo
+              Avançar para próximo estágio
             </Button>
 
             <Button
@@ -361,7 +385,14 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
             {nextBlockedByApproval ? (
               <p className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
                 <AlertTriangle className="h-4 w-4" />
-                O avanço só é permitido após aprovação humana explícita deste estágio.
+                Bloqueado: aprove o estágio atual para habilitar o avanço.
+              </p>
+            ) : null}
+
+            {!hasNextStage ? (
+              <p className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 p-2 text-xs text-slate-700">
+                <AlertTriangle className="h-4 w-4" />
+                Não existe próximo estágio disponível para este workflow.
               </p>
             ) : null}
 
