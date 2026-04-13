@@ -7,6 +7,7 @@ import { AlertTriangle, CheckCircle2, Clock3, Play, RotateCcw, SkipForward } fro
 import { AlertBanner, EmptyState, StatusPill, SystemBreadcrumb, SystemCard, SystemSkeleton, systemToast } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { HumanApprovalDialog } from "@/features/workflows/components/human-approval-dialog";
 import {
   useApproveStageMutation,
   useNextStageMutation,
@@ -75,6 +76,9 @@ function getStageFromWorkflow(workflowStages: Stage[] | undefined, stageNumber: 
 export function StageDetailsView({ workflowId, stageId }: { workflowId: string; stageId: string }) {
   const stageNumber = Number(stageId);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [approvalNotes, setApprovalNotes] = useState("");
+  const [humanReviewed, setHumanReviewed] = useState(false);
+  const [justApproved, setJustApproved] = useState(false);
 
   const workflowQuery = useWorkflowQuery(workflowId);
   const runStageMutation = useRunStageMutation();
@@ -87,6 +91,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
 
   const stageOutputsQuery = useStageOutputsQuery(workflowId, Number.isFinite(stageNumber) ? stageNumber : 1);
   const latestOutput = stageOutputsQuery.data?.[0];
+  const stageArtifacts = (stageOutputsQuery.data ?? []).flatMap((output) => output.artifacts ?? []);
 
   const stageBlueprint = stage ? getStageBlueprint(stage.stage) : undefined;
   const io = expectedStageIO[stageNumber] ?? {
@@ -100,7 +105,8 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
 
   const canRun = Boolean(stage?.canRun ?? stage?.status === "not_started");
   const canApprove = Boolean(stage?.canApprove ?? awaitingHumanApproval || stage?.status === "running");
-  const canAdvance = Boolean(stage?.canNext ?? stage?.status === "approved");
+  const canAdvance = Boolean(stage?.canNext ?? stage?.status === "approved" || justApproved);
+  const shouldShowApproveAction = canApprove && (awaitingHumanApproval || stage?.requiresApproval || stage?.stage === 7 || stage?.status === "running");
 
   const isMutating = runStageMutation.isPending || approveStageMutation.isPending || nextStageMutation.isPending;
 
@@ -119,11 +125,16 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     if (!stage) return;
     try {
       await approveStageMutation.mutateAsync({ workflowId, stage: stage.stage });
+      setJustApproved(true);
       systemToast.success("Estágio aprovado", `Estágio ${stage.stage} aprovado com sucesso.`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Falha ao aprovar estágio.";
+      const message = error instanceof Error ? error.message : "Não foi possível registrar a aprovação agora.";
       systemToast.error("Erro ao aprovar", message);
+      return;
     }
+    setHumanReviewed(false);
+    setApprovalNotes("");
+    setConfirmAction(null);
   };
 
   const advanceStage = async () => {
@@ -139,7 +150,6 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
 
   const executeConfirmedAction = async () => {
     if (confirmAction === "rerun") await safeRunStage();
-    if (confirmAction === "approve") await approveStage();
     if (confirmAction === "advance") await advanceStage();
     setConfirmAction(null);
   };
@@ -196,6 +206,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
           </div>
           <div className="flex items-center gap-2">
             <StatusPill status={stage.status} />
+            {stage.status === "approved" || justApproved ? <Badge className="border-emerald-800 bg-emerald-600 text-white">APPROVED</Badge> : null}
             {stage.optional ? <Badge variant="secondary">Opcional</Badge> : null}
           </div>
         </div>
@@ -309,14 +320,12 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
               </Button>
             </Link>
 
-            <Button
-              className="w-full justify-start gap-2"
-              onClick={() => setConfirmAction("approve")}
-              disabled={!canApprove || isMutating || !stage8DependencyOk}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Aprovar
-            </Button>
+            {shouldShowApproveAction ? (
+              <Button className="w-full justify-start gap-2" onClick={() => setConfirmAction("approve")} disabled={isMutating || !stage8DependencyOk}>
+                <CheckCircle2 className="h-4 w-4" />
+                Aprovar estágio
+              </Button>
+            ) : null}
 
             <Button
               className="w-full justify-start gap-2"
@@ -331,13 +340,33 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
         </SystemCard>
       </div>
 
-      {confirmAction ? (
+      {confirmAction === "approve" ? (
+        <HumanApprovalDialog
+          open
+          stageNumber={stage.stage}
+          stageName={stage.name}
+          stageStatusLabel={stage.status}
+          stageSummary={latestOutput?.summary ?? "Sem resumo da execução mais recente."}
+          outputs={stageArtifacts}
+          notes={approvalNotes}
+          onNotesChange={setApprovalNotes}
+          reviewed={humanReviewed}
+          onReviewedChange={setHumanReviewed}
+          onClose={() => {
+            setConfirmAction(null);
+            setHumanReviewed(false);
+          }}
+          onConfirm={approveStage}
+          isSubmitting={isMutating}
+        />
+      ) : null}
+
+      {confirmAction && confirmAction !== "approve" ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl border bg-background p-4 shadow-xl">
             <h2 className="text-lg font-semibold">Confirmar ação crítica</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               {confirmAction === "rerun" && "Você está prestes a reexecutar o estágio. Isso pode sobrescrever outputs anteriores."}
-              {confirmAction === "approve" && "Você está prestes a aprovar o estágio. Isso libera decisões downstream."}
               {confirmAction === "advance" && "Você está prestes a avançar o workflow para o próximo estágio."}
             </p>
             <div className="mt-4 flex justify-end gap-2">
@@ -356,6 +385,13 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
         <p className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
           <Clock3 className="h-4 w-4" />
           Pendência humana ativa: registre aprovação explícita para liberar o avanço.
+        </p>
+      ) : null}
+
+      {stage.status === "approved" || justApproved ? (
+        <p className="flex items-center gap-2 rounded-lg border-2 border-emerald-500 bg-emerald-50 p-3 text-sm font-semibold text-emerald-900">
+          <CheckCircle2 className="h-4 w-4" />
+          Status APPROVED confirmado. A ação “Avançar” está liberada para o próximo passo.
         </p>
       ) : null}
     </div>
