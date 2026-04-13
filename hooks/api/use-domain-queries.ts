@@ -6,7 +6,7 @@ import { agentsService } from "@/services/api/agents-service";
 import { getErrorMessage } from "@/services/api/client";
 import { healthService } from "@/services/api/health-service";
 import { workflowsService } from "@/services/api/workflows-service";
-import type { PatchArtifactPayload, Stage, StageOutput } from "@/types/api/domain";
+import type { PatchArtifactPayload, Stage } from "@/types/api/domain";
 
 export const domainQueryKeys = {
   health: ["health"] as const,
@@ -26,14 +26,17 @@ function normalizeListResponse<T>(payload: { items: T[] } | T[]): T[] {
   return Array.isArray(payload) ? payload : payload.items;
 }
 
+const DEFAULT_QUERY_STALE_TIME = 30_000;
+
 export function useHealthQuery() {
-  return useQuery({ queryKey: domainQueryKeys.health, queryFn: healthService.get });
+  return useQuery({ queryKey: domainQueryKeys.health, queryFn: healthService.get, staleTime: DEFAULT_QUERY_STALE_TIME });
 }
 
 export function useAgentsQuery() {
   return useQuery({
     queryKey: domainQueryKeys.agents,
     queryFn: async () => normalizeListResponse(await agentsService.list()),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -42,6 +45,7 @@ export function useAgentQuery(agentId: string) {
     queryKey: domainQueryKeys.agent(agentId),
     queryFn: () => agentsService.getById(agentId),
     enabled: Boolean(agentId),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -49,6 +53,7 @@ export function useWorkflowsQuery() {
   return useQuery({
     queryKey: domainQueryKeys.workflows,
     queryFn: async () => normalizeListResponse(await workflowsService.list()),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -62,6 +67,7 @@ export function useCreateWorkflowMutation() {
       queryClient.invalidateQueries({ queryKey: domainQueryKeys.workflows });
       queryClient.setQueryData(domainQueryKeys.workflow(createdWorkflow.id), createdWorkflow);
     },
+    retry: 0,
     meta: { friendlyError: getErrorMessage },
   });
 }
@@ -70,6 +76,7 @@ export function useWorkflowQuery(workflowId: string) {
     queryKey: domainQueryKeys.workflow(workflowId),
     queryFn: () => workflowsService.getById(workflowId),
     enabled: Boolean(workflowId),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -77,7 +84,8 @@ export function useStageQuery(workflowId: string, stage: number) {
   return useQuery({
     queryKey: domainQueryKeys.stage(workflowId, stage),
     queryFn: () => workflowsService.getStage(workflowId, stage),
-    enabled: Boolean(workflowId),
+    enabled: Boolean(workflowId && stage > 0),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -85,7 +93,8 @@ export function useStageOutputsQuery(workflowId: string, stage: number) {
   return useQuery({
     queryKey: domainQueryKeys.stageOutputs(workflowId, stage),
     queryFn: async () => normalizeListResponse(await workflowsService.getStageOutputs(workflowId, stage)),
-    enabled: Boolean(workflowId),
+    enabled: Boolean(workflowId && stage > 0),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -94,6 +103,7 @@ export function useLatestAgentOutputQuery(workflowId: string, agentCode: string)
     queryKey: domainQueryKeys.latestAgentOutput(workflowId, agentCode),
     queryFn: () => workflowsService.getLatestAgentOutput(workflowId, agentCode),
     enabled: Boolean(workflowId && agentCode),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -101,7 +111,8 @@ export function useArtifactQuery(workflowId: string, stage: number, artifactName
   return useQuery({
     queryKey: domainQueryKeys.artifact(workflowId, stage, artifactName),
     queryFn: () => workflowsService.getArtifact(workflowId, stage, artifactName),
-    enabled: Boolean(workflowId && artifactName),
+    enabled: Boolean(workflowId && stage > 0 && artifactName),
+    staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
@@ -118,6 +129,7 @@ export function useRunStageMutation() {
   return useMutation({
     mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number }) => workflowsService.runStage(workflowId, stage),
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
+    retry: 0,
     meta: { friendlyError: getErrorMessage },
   });
 }
@@ -129,6 +141,7 @@ export function useApproveStageMutation() {
     mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number }) =>
       workflowsService.approveStage(workflowId, stage),
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
+    retry: 0,
     meta: { friendlyError: getErrorMessage },
   });
 }
@@ -145,6 +158,7 @@ export function useNextStageMutation() {
       return workflowsService.nextStage(workflowId, stage);
     },
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
+    retry: 0,
     meta: { friendlyError: getErrorMessage },
   });
 }
@@ -168,6 +182,7 @@ export function usePatchArtifactMutation() {
       queryClient.invalidateQueries({ queryKey: domainQueryKeys.artifact(vars.workflowId, vars.stage, vars.artifactName) });
       queryClient.invalidateQueries({ queryKey: domainQueryKeys.stageOutputs(vars.workflowId, vars.stage) });
     },
+    retry: 0,
     meta: { friendlyError: getErrorMessage },
   });
 }

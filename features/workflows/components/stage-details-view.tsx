@@ -14,7 +14,7 @@ import {
   useRunStageMutation,
   useStageOutputsQuery,
   useWorkflowQuery,
-} from "@/hooks/api/use-domain-api";
+} from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, mergeStageWithBlueprint } from "@/lib/workflow/stages";
 import type { Stage } from "@/types/api/domain";
@@ -109,8 +109,8 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   const awaitingHumanApproval = stage?.status === "awaiting_human_approval";
 
   const canRun = Boolean(stage?.canRun ?? stage?.status === "not_started");
-  const canApprove = Boolean(stage?.canApprove ?? awaitingHumanApproval || stage?.status === "running");
-  const canAdvance = Boolean(stage?.canNext ?? stage?.status === "approved" || justApproved);
+  const canApprove = Boolean(stage?.canApprove ?? (awaitingHumanApproval || stage?.status === "running"));
+  const canAdvance = Boolean(stage?.canNext ?? (stage?.status === "approved" || justApproved));
   const shouldShowApproveAction = canApprove && (awaitingHumanApproval || stage?.requiresApproval || stage?.stage === 7 || stage?.status === "running");
 
   const isMutating = runStageMutation.isPending || approveStageMutation.isPending || nextStageMutation.isPending;

@@ -10,7 +10,7 @@ import { z } from "zod";
 import { systemToast, SystemCard } from "@/components/system";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCreateWorkflowMutation } from "@/hooks/api/use-domain-api";
+import { useCreateWorkflowMutation } from "@/hooks/api/use-domain-queries";
 import { getErrorMessage } from "@/services/api/client";
 
 const newWorkflowSchema = z.object({

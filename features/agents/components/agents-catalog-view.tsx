@@ -8,7 +8,7 @@ import { EmptyState, PremiumPageSkeleton, UXStateCard } from "@/components/syste
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAgentsQuery } from "@/hooks/api/use-domain-api";
+import { useAgentsQuery } from "@/hooks/api/use-domain-queries";
 import type { Agent } from "@/types/api/domain";
 
 function getAgentStage(agent: Agent) {

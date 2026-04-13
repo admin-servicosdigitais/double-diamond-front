@@ -1,6 +1,6 @@
 import type { Workflow } from "@/types/api/domain";
 
-export function formatWorkflowDate(date?: string) {
+export function formatDateTimeLabel(date?: string) {
   if (!date) return "Sem atualização";
 
   const parsed = new Date(date);
@@ -13,6 +13,8 @@ export function formatWorkflowDate(date?: string) {
     minute: "2-digit",
   }).format(parsed);
 }
+
+export const formatWorkflowDate = formatDateTimeLabel;
 
 export function getCurrentStageLabel(workflow: Workflow) {
   if (!workflow.currentStage) return "Não iniciado";
@@ -29,8 +31,8 @@ export function getNextActionLabel(workflow: Workflow) {
   if (workflow.status === "awaiting_human_approval") return "Revisar e aprovar estágio";
   if (workflow.status === "blocked") return "Desbloquear dependências";
   if (workflow.status === "running") return "Acompanhar execução";
-  if (workflow.status === "error") return "Investigar falha";
+  if (workflow.status === "error") return "Investigar falha do estágio";
   if (workflow.status === "completed") return "Validar entrega final";
 
-  return "Iniciar workflow";
+  return "Iniciar execução do workflow";
 }

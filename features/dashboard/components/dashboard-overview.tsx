@@ -4,46 +4,21 @@ import Link from "next/link";
 
 import { AlertCircle, ArrowRight, CheckCircle2, Clock3, LoaderCircle, ShieldCheck, Workflow } from "lucide-react";
 
-import { AlertBanner, EmptyState, MetricCard, PremiumPageSkeleton, StatusPill, SystemCard, UXStateCard } from "@/components/system";
+import {
+  AlertBanner,
+  EmptyState,
+  MetricCard,
+  PremiumPageSkeleton,
+  StatusPill,
+  SystemCard,
+  SystemSkeleton,
+  UXStateCard,
+} from "@/components/system";
 import { buttonVariants } from "@/components/ui/button";
-import { useHealthQuery, useWorkflowsQuery } from "@/hooks/api/use-domain-api";
+import { useHealthQuery, useWorkflowsQuery } from "@/hooks/api/use-domain-queries";
+import { formatDateTimeLabel, getCurrentStageLabel, getNextActionLabel } from "@/lib/workflow/display";
 import { cn } from "@/lib/utils";
-import type { HealthStatus, Workflow as WorkflowType } from "@/types/api/domain";
-
-function formatDateTime(date?: string) {
-  if (!date) return "Sem atualização";
-
-  const parsed = new Date(date);
-  if (Number.isNaN(parsed.getTime())) return "Sem atualização";
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
-function getCurrentStageLabel(workflow: WorkflowType) {
-  if (!workflow.currentStage) return "Não iniciado";
-
-  const currentStage = workflow.stages?.find((stage) => stage.stage === workflow.currentStage);
-  if (currentStage?.name) {
-    return `${currentStage.stage}. ${currentStage.name}`;
-  }
-
-  return `Etapa ${workflow.currentStage}`;
-}
-
-function getNextAction(workflow: WorkflowType) {
-  if (workflow.status === "awaiting_human_approval") return "Revisar e aprovar estágio";
-  if (workflow.status === "blocked") return "Desbloquear dependências";
-  if (workflow.status === "running") return "Acompanhar execução";
-  if (workflow.status === "error") return "Investigar falha do estágio";
-  if (workflow.status === "completed") return "Validar entrega final";
-
-  return "Iniciar execução do workflow";
-}
+import type { HealthStatus } from "@/types/api/domain";
 
 function getHealthTone(status?: HealthStatus) {
   if (status === "ok") return "success" as const;
@@ -150,7 +125,7 @@ export function DashboardOverview() {
                     <StatusPill status={workflow.status} />
                   </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">Última atualização: {formatDateTime(workflow.updatedAt)}</p>
+                    <p className="text-xs text-muted-foreground">Última atualização: {formatDateTimeLabel(workflow.updatedAt)}</p>
                     <Link
                       href={`/workflows/${workflow.id}`}
                       className={cn(buttonVariants({ size: "sm" }), "gap-2")}
@@ -187,7 +162,7 @@ export function DashboardOverview() {
                 title={`Status geral: ${healthStatus ?? "indisponível"}`}
                 description={`Serviço: ${healthQuery.data?.service ?? "API"} • Versão: ${healthQuery.data?.version ?? "n/d"}`}
               />
-              <p className="text-xs text-muted-foreground">Última verificação: {formatDateTime(healthQuery.data?.timestamp)}</p>
+              <p className="text-xs text-muted-foreground">Última verificação: {formatDateTimeLabel(healthQuery.data?.timestamp)}</p>
               {dependencies.length > 0 ? (
                 <ul className="space-y-2">
                   {dependencies.map(([name, status]) => (
@@ -238,8 +213,8 @@ export function DashboardOverview() {
                     <td className="px-4 py-3">
                       <StatusPill status={workflow.status} showIcon={false} />
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDateTime(workflow.updatedAt ?? workflow.createdAt)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{getNextAction(workflow)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDateTimeLabel(workflow.updatedAt ?? workflow.createdAt)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{getNextActionLabel(workflow)}</td>
                     <td className="px-4 py-3 text-right">
                       <Link href={`/workflows/${workflow.id}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-2")}>
                         Abrir
