@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
-import { getStageBlueprint, inferStageSummary, mergeStageWithBlueprint } from "@/lib/workflow/stages";
+import { getStageBlueprint, inferStageSummary, mergeStageWithBlueprint, parseStageOrder } from "@/lib/workflow/stages";
 import type { Artifact, StageOutput } from "@/types/api/domain";
 
 type OutputDocument = {
@@ -60,14 +60,14 @@ function flattenOutputDocuments(outputs: StageOutput[]): OutputDocument[] {
 }
 
 export function StageOutputsView({ workflowId, stageId }: { workflowId: string; stageId: string }) {
-  const stageNumber = Number(stageId);
-  const safeStage = Number.isFinite(stageNumber) ? stageNumber : 1;
+  const stageNumber = parseStageOrder(stageId);
+  const safeStage = stageId;
 
   const workflowQuery = useWorkflowQuery(workflowId);
   const outputsQuery = useStageOutputsQuery(workflowId, safeStage);
 
   const stage = useMemo(() => {
-    if (!workflowQuery.data || !Number.isFinite(stageNumber)) return undefined;
+    if (!workflowQuery.data) return undefined;
     const stageFromWorkflow = workflowQuery.data.stages?.find((item) => item.stage === stageNumber);
     return mergeStageWithBlueprint(stageNumber, stageFromWorkflow);
   }, [workflowQuery.data, stageNumber]);
@@ -109,7 +109,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
     );
   }
 
-  if (!Number.isFinite(stageNumber) || !stage) {
+  if (!stage) {
     return (
       <EmptyState
         icon={AlertTriangle}
@@ -128,7 +128,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
           { label: "Dashboard", href: "/dashboard" },
           { label: "Workflows", href: "/workflows" },
           { label: workflowQuery.data.name, href: `/workflows/${workflowQuery.data.id}` },
-          { label: `Stage ${stage.stage}`, href: `/workflows/${workflowQuery.data.id}/stages/${stage.stage}` },
+          { label: `Stage ${stage.stage}`, href: `/workflows/${workflowQuery.data.id}/stages/${stage.stageKey ?? stage.stage}` },
           { label: "Outputs" },
         ]}
       />
@@ -168,7 +168,7 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
       </SystemCard>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={`/workflows/${workflowId}/stages/${stage.stage}`}>
+        <Link href={`/workflows/${workflowId}/stages/${stage.stageKey ?? stage.stage}`}>
           <Button variant="outline">Voltar ao estágio</Button>
         </Link>
       </div>
@@ -215,12 +215,12 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
                       <span>Agente: {document.output.agentCode ?? "n/d"}</span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/workflows/${workflowId}/stages/${stage.stage}/outputs/${artifactName}`}>
+                      <Link href={`/workflows/${workflowId}/stages/${stage.stageKey ?? stage.stage}/outputs/${artifactName}`}>
                         <Button size="sm" variant="secondary" className="gap-1">
                           <Eye className="h-3.5 w-3.5" /> Abrir
                         </Button>
                       </Link>
-                      <Link href={`/workflows/${workflowId}/stages/${stage.stage}/outputs/${artifactName}`}>
+                      <Link href={`/workflows/${workflowId}/stages/${stage.stageKey ?? stage.stage}/outputs/${artifactName}`}>
                         <Button size="sm" className="gap-1">
                           <PencilLine className="h-3.5 w-3.5" /> Editar
                         </Button>

@@ -41,10 +41,9 @@ export function NewWorkflowForm() {
 
     try {
       const created = await createWorkflow.mutateAsync({
+        workflow_id: values.workflow_id,
         name: values.name,
-        input: {
-          workflow_id: values.workflow_id,
-        },
+        words: [values.name],
       });
 
       const createdWorkflowId = created.id || values.workflow_id;

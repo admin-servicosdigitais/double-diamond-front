@@ -106,7 +106,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   );
 
   const effectiveSelectedStage = selectedStage ?? stages[0];
-  const stageOutputsQuery = useStageOutputsQuery(workflowId, effectiveSelectedStage?.stage ?? 1);
+  const stageOutputsQuery = useStageOutputsQuery(workflowId, effectiveSelectedStage?.stageKey ?? effectiveSelectedStage?.stage ?? 1);
   const artifacts = getOutputsSummary(stageOutputsQuery.data);
 
   const stageBlueprint = effectiveSelectedStage ? getStageBlueprint(effectiveSelectedStage.stage) : undefined;
@@ -137,7 +137,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   const runStage = async () => {
     if (!effectiveSelectedStage) return;
     try {
-      await runStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stage });
+      await runStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stageKey ?? effectiveSelectedStage.stage });
       systemToast.success("Estágio em execução", `Estágio ${effectiveSelectedStage.stage} iniciado com sucesso.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível iniciar o estágio agora.";
@@ -148,7 +148,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   const approveStage = async () => {
     if (!effectiveSelectedStage) return;
     try {
-      await approveStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stage });
+      await approveStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stageKey ?? effectiveSelectedStage.stage });
       setJustApprovedStage(effectiveSelectedStage.stage);
       setApprovalOpen(false);
       setHumanReviewed(false);
@@ -175,7 +175,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
     try {
       const nextStageResponse = await nextStageMutation.mutateAsync({
         workflowId,
-        stage: effectiveSelectedStage.stage,
+        stage: effectiveSelectedStage.stageKey ?? effectiveSelectedStage.stage,
         currentStage: effectiveSelectedStage,
       });
 
@@ -240,7 +240,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
               Executar estágio
             </Button>
             <Link
-              href={`/workflows/${workflow.id}/stages/${effectiveSelectedStage.stage}/outputs`}
+              href={`/workflows/${workflow.id}/stages/${effectiveSelectedStage.stageKey ?? effectiveSelectedStage.stage}/outputs`}
               className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "font-medium")}
             >
               Revisar outputs
@@ -345,7 +345,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
             </Button>
 
             <Link
-              href={`/workflows/${workflow.id}/stages/${effectiveSelectedStage.stage}/outputs`}
+              href={`/workflows/${workflow.id}/stages/${effectiveSelectedStage.stageKey ?? effectiveSelectedStage.stage}/outputs`}
               className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start")}
             >
               Revisar outputs

@@ -25,6 +25,7 @@ import {
   useWorkflowQuery,
 } from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
+import { parseStageOrder } from "@/lib/workflow/stages";
 
 function formatBytes(size?: number) {
   if (!size || size <= 0) return "n/d";
@@ -236,8 +237,8 @@ export function ArtifactDetailsView({
 }) {
   const router = useRouter();
   const decodedArtifactName = decodeURIComponent(artifactName);
-  const stageNumber = Number(stageId);
-  const safeStage = Number.isFinite(stageNumber) ? stageNumber : 1;
+  const stageNumber = parseStageOrder(stageId);
+  const safeStage = stageId;
 
   const workflowQuery = useWorkflowQuery(workflowId);
   const outputsQuery = useStageOutputsQuery(workflowId, safeStage);

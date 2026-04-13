@@ -14,11 +14,11 @@ export const domainQueryKeys = {
   agent: (agentId: string) => ["agents", agentId] as const,
   workflows: ["workflows"] as const,
   workflow: (workflowId: string) => ["workflows", workflowId] as const,
-  stage: (workflowId: string, stage: number) => ["workflows", workflowId, "stages", stage] as const,
-  stageOutputs: (workflowId: string, stage: number) => ["workflows", workflowId, "stages", stage, "outputs"] as const,
+  stage: (workflowId: string, stage: number | string) => ["workflows", workflowId, "stages", stage] as const,
+  stageOutputs: (workflowId: string, stage: number | string) => ["workflows", workflowId, "stages", stage, "outputs"] as const,
   latestAgentOutput: (workflowId: string, agentCode: string) =>
     ["workflows", workflowId, "agents", agentCode, "latest-output"] as const,
-  artifact: (workflowId: string, stage: number, artifactName: string) =>
+  artifact: (workflowId: string, stage: number | string, artifactName: string) =>
     ["workflows", workflowId, "stages", stage, "outputs", artifactName] as const,
 };
 
@@ -80,20 +80,20 @@ export function useWorkflowQuery(workflowId: string) {
   });
 }
 
-export function useStageQuery(workflowId: string, stage: number) {
+export function useStageQuery(workflowId: string, stage: number | string) {
   return useQuery({
     queryKey: domainQueryKeys.stage(workflowId, stage),
     queryFn: () => workflowsService.getStage(workflowId, stage),
-    enabled: Boolean(workflowId && stage > 0),
+    enabled: Boolean(workflowId && stage),
     staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
-export function useStageOutputsQuery(workflowId: string, stage: number) {
+export function useStageOutputsQuery(workflowId: string, stage: number | string) {
   return useQuery({
     queryKey: domainQueryKeys.stageOutputs(workflowId, stage),
     queryFn: async () => normalizeListResponse(await workflowsService.getStageOutputs(workflowId, stage)),
-    enabled: Boolean(workflowId && stage > 0),
+    enabled: Boolean(workflowId && stage),
     staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
@@ -107,16 +107,16 @@ export function useLatestAgentOutputQuery(workflowId: string, agentCode: string)
   });
 }
 
-export function useArtifactQuery(workflowId: string, stage: number, artifactName: string) {
+export function useArtifactQuery(workflowId: string, stage: number | string, artifactName: string) {
   return useQuery({
     queryKey: domainQueryKeys.artifact(workflowId, stage, artifactName),
     queryFn: () => workflowsService.getArtifact(workflowId, stage, artifactName),
-    enabled: Boolean(workflowId && stage > 0 && artifactName),
+    enabled: Boolean(workflowId && stage && artifactName),
     staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
 
-function invalidateWorkflowGraph(queryClient: ReturnType<typeof useQueryClient>, workflowId: string, stage: number) {
+function invalidateWorkflowGraph(queryClient: ReturnType<typeof useQueryClient>, workflowId: string, stage: number | string) {
   queryClient.invalidateQueries({ queryKey: domainQueryKeys.workflows });
   queryClient.invalidateQueries({ queryKey: domainQueryKeys.workflow(workflowId) });
   queryClient.invalidateQueries({ queryKey: domainQueryKeys.stage(workflowId, stage) });
@@ -127,7 +127,7 @@ export function useRunStageMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number }) => workflowsService.runStage(workflowId, stage),
+    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number | string }) => workflowsService.runStage(workflowId, stage),
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
     retry: 0,
     meta: { friendlyError: getErrorMessage },
@@ -138,7 +138,7 @@ export function useApproveStageMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number }) =>
+    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number | string }) =>
       workflowsService.approveStage(workflowId, stage),
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
     retry: 0,
@@ -150,7 +150,7 @@ export function useNextStageMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ workflowId, stage, currentStage }: { workflowId: string; stage: number; currentStage?: Stage }) => {
+    mutationFn: async ({ workflowId, stage, currentStage }: { workflowId: string; stage: number | string; currentStage?: Stage }) => {
       if (currentStage?.status && currentStage.status !== "approved") {
         throw new Error("O estágio atual precisa estar aprovado antes de avançar.");
       }
@@ -174,7 +174,7 @@ export function usePatchArtifactMutation() {
       payload,
     }: {
       workflowId: string;
-      stage: number;
+      stage: number | string;
       artifactName: string;
       payload: PatchArtifactPayload;
     }) => workflowsService.patchArtifact(workflowId, stage, artifactName, payload),

@@ -16,7 +16,7 @@ import {
   useWorkflowQuery,
 } from "@/hooks/api/use-domain-queries";
 import { formatWorkflowDate } from "@/lib/workflow/display";
-import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, mergeStageWithBlueprint } from "@/lib/workflow/stages";
+import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, mergeStageWithBlueprint, parseStageOrder } from "@/lib/workflow/stages";
 import type { Stage } from "@/types/api/domain";
 
 type ConfirmAction = "approve" | "advance" | "rerun" | null;
@@ -74,7 +74,8 @@ function getStageFromWorkflow(workflowStages: Stage[] | undefined, stageNumber: 
 }
 
 export function StageDetailsView({ workflowId, stageId }: { workflowId: string; stageId: string }) {
-  const stageNumber = Number(stageId);
+  const stageNumber = parseStageOrder(stageId);
+  const stageRef = stageId;
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [approvalNotes, setApprovalNotes] = useState("");
   const [humanReviewed, setHumanReviewed] = useState(false);
@@ -94,7 +95,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     return stage.stage < highestStage;
   }, [stage]);
 
-  const stageOutputsQuery = useStageOutputsQuery(workflowId, Number.isFinite(stageNumber) ? stageNumber : 1);
+  const stageOutputsQuery = useStageOutputsQuery(workflowId, stage?.stageKey ?? stageRef);
   const latestOutput = stageOutputsQuery.data?.[0];
   const stageArtifacts = (stageOutputsQuery.data ?? []).flatMap((output) => output.artifacts ?? []);
 
@@ -118,7 +119,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   const safeRunStage = async () => {
     if (!stage) return;
     try {
-      await runStageMutation.mutateAsync({ workflowId, stage: stage.stage });
+      await runStageMutation.mutateAsync({ workflowId, stage: stage.stageKey ?? stage.stage });
       systemToast.success("Estágio executado", `Estágio ${stage.stage} iniciado com sucesso.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha ao executar estágio.";
@@ -129,7 +130,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   const approveStage = async () => {
     if (!stage) return;
     try {
-      await approveStageMutation.mutateAsync({ workflowId, stage: stage.stage });
+      await approveStageMutation.mutateAsync({ workflowId, stage: stage.stageKey ?? stage.stage });
       setJustApproved(true);
       systemToast.success("Estágio aprovado", `Estágio ${stage.stage} aprovado com sucesso.`);
     } catch (error) {
@@ -155,7 +156,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     }
 
     try {
-      const nextStageResponse = await nextStageMutation.mutateAsync({ workflowId, stage: stage.stage, currentStage: stage });
+      const nextStageResponse = await nextStageMutation.mutateAsync({ workflowId, stage: stage.stageKey ?? stage.stage, currentStage: stage });
       const nextStageNumber = nextStageResponse.stage > stage.stage ? nextStageResponse.stage : stage.stage + 1;
       systemToast.success("Workflow avançado", `Fluxo avançado com sucesso. Estágio ${nextStageNumber} agora está ativo.`);
     } catch (error) {
@@ -186,7 +187,7 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     );
   }
 
-  if (!stage || !Number.isFinite(stageNumber)) {
+  if (!stage) {
     return (
       <EmptyState
         icon={AlertTriangle}

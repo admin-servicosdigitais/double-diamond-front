@@ -33,6 +33,7 @@ export function mergeStageWithBlueprint(stageNumber: number, stage?: Stage): Sta
 
   return {
     stage: stageNumber,
+    stageKey: stage?.stageKey ?? String(stageNumber),
     status: stage?.status ?? (stageNumber === 1 ? "running" : "not_started"),
     name: stage?.name ?? fallbackBlueprint?.name,
     optional: stage?.optional ?? fallbackBlueprint?.optional,
@@ -54,4 +55,16 @@ export function inferStageSummary(stageStatus: StageStatus) {
   if (stageStatus === "running") return "Etapa em execução com geração de novos artefatos.";
 
   return "Etapa ainda não iniciada.";
+}
+
+
+export function parseStageOrder(stageRef: string | number | undefined, fallback = 1) {
+  if (typeof stageRef === "number" && Number.isFinite(stageRef)) return stageRef;
+  if (typeof stageRef !== "string") return fallback;
+
+  const match = stageRef.match(/\d+/);
+  if (!match) return fallback;
+
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
