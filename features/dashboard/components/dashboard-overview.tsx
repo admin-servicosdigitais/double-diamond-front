@@ -1,110 +1,270 @@
 "use client";
 
-import { Activity, Archive, CheckCircle2, ClipboardCheck, Clock3, FilePlus2, Sparkles } from "lucide-react";
+import Link from "next/link";
 
-import {
-  ActionCard,
-  AlertBanner,
-  ArtifactCard,
-  ContextPanel,
-  EmptyState,
-  MetricCard,
-  StageActionToolbar,
-  StageStepper,
-  SystemCard,
-  WorkflowListSkeleton,
-  WorkflowTable,
-} from "@/components/system";
-import { useWorkflows } from "@/hooks/use-workflows";
+import { AlertCircle, ArrowRight, CheckCircle2, Clock3, LoaderCircle, ShieldCheck, Workflow } from "lucide-react";
 
-import { QuickWorkflowForm } from "./quick-workflow-form";
+import { AlertBanner, EmptyState, MetricCard, StatusPill, SystemCard, SystemSkeleton } from "@/components/system";
+import { buttonVariants } from "@/components/ui/button";
+import { useHealthQuery, useWorkflowsQuery } from "@/hooks/api/use-domain-api";
+import { cn } from "@/lib/utils";
+import type { HealthStatus, Workflow as WorkflowType } from "@/types/api/domain";
 
-const metricCards = [
-  { label: "Fluxos ativos", value: "12", icon: Activity, helper: "+2 na última hora" },
-  { label: "Aguardando aprovação", value: "5", icon: Clock3, helper: "2 em SLA crítico" },
-  { label: "Concluídos hoje", value: "7", icon: CheckCircle2, helper: "95% sem retrabalho" },
-];
+function formatDateTime(date?: string) {
+  if (!date) return "Sem atualização";
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return "Sem atualização";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+}
+
+function getCurrentStageLabel(workflow: WorkflowType) {
+  if (!workflow.currentStage) return "Não iniciado";
+
+  const currentStage = workflow.stages?.find((stage) => stage.stage === workflow.currentStage);
+  if (currentStage?.name) {
+    return `${currentStage.stage}. ${currentStage.name}`;
+  }
+
+  return `Etapa ${workflow.currentStage}`;
+}
+
+function getNextAction(workflow: WorkflowType) {
+  if (workflow.status === "awaiting_human_approval") return "Revisar e aprovar estágio";
+  if (workflow.status === "blocked") return "Desbloquear dependências";
+  if (workflow.status === "running") return "Acompanhar execução";
+  if (workflow.status === "error") return "Investigar falha do estágio";
+  if (workflow.status === "completed") return "Validar entrega final";
+
+  return "Iniciar execução do workflow";
+}
+
+function getHealthTone(status?: HealthStatus) {
+  if (status === "ok") return "success" as const;
+  if (status === "degraded") return "warning" as const;
+  return "critical" as const;
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <section className="grid gap-4 md:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <SystemSkeleton key={index} className="h-32 rounded-xl" />
+        ))}
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+        <SystemSkeleton className="h-60 rounded-xl" />
+        <SystemSkeleton className="h-60 rounded-xl" />
+      </section>
+
+      <SystemSkeleton className="h-96 rounded-xl" />
+      <SystemSkeleton className="h-40 rounded-xl" />
+    </div>
+  );
+}
 
 export function DashboardOverview() {
-  const { data, isLoading } = useWorkflows();
+  const workflowsQuery = useWorkflowsQuery();
+  const healthQuery = useHealthQuery();
+
+  if (workflowsQuery.isLoading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (workflowsQuery.isError) {
+    return (
+      <EmptyState
+        icon={AlertCircle}
+        title="Não foi possível carregar o dashboard"
+        description="Falha ao buscar os workflows. Atualize a página para tentar novamente em alguns segundos."
+      />
+    );
+  }
+
+  const workflows = workflowsQuery.data ?? [];
+  const pendingApproval = workflows.filter((workflow) => workflow.status === "awaiting_human_approval");
+  const running = workflows.filter((workflow) => workflow.status === "running");
+  const blocked = workflows.filter((workflow) => workflow.status === "blocked" || workflow.status === "error");
+  const completed = workflows.filter((workflow) => workflow.status === "completed");
+  const active = workflows.filter((workflow) =>
+    ["running", "awaiting_human_approval", "approved", "blocked", "error"].includes(workflow.status),
+  );
+
+  const recentWorkflows = [...workflows]
+    .sort((a, b) => new Date(b.updatedAt ?? b.createdAt ?? 0).getTime() - new Date(a.updatedAt ?? a.createdAt ?? 0).getTime())
+    .slice(0, 8);
+
+  const metricCards = [
+    { label: "Workflows ativos", value: String(active.length), icon: Workflow, helper: "Com execução ou pendências" },
+    {
+      label: "Aguardando aprovação",
+      value: String(pendingApproval.length),
+      icon: Clock3,
+      helper: "Dependem de ação humana",
+      className: "border-amber-200 bg-amber-50/70",
+    },
+    { label: "Em execução", value: String(running.length), icon: LoaderCircle, helper: "Stages em processamento" },
+    { label: "Bloqueados", value: String(blocked.length), icon: AlertCircle, helper: "Com impedimentos ou erro" },
+    { label: "Concluídos", value: String(completed.length), icon: CheckCircle2, helper: "Finalizados com sucesso" },
+  ];
+
+  const healthStatus = healthQuery.data?.status;
+  const dependencies = Object.entries(healthQuery.data?.dependencies ?? {});
 
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <div className="space-y-2">
-          <p className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            Design System Operacional SaaS
-          </p>
-          <h1>Controle humano sobre workflows com IA</h1>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Experiência visual premium e limpa para status, progresso, revisão, aprovação e artefatos.
-          </p>
-        </div>
-        <AlertBanner
-          tone="info"
-          title="Atenção operacional"
-          description="Você possui 3 estágios aguardando aprovação humana para manter o fluxo dentro do SLA."
-        />
+        <h1>Dashboard operacional</h1>
+        <p className="text-sm text-muted-foreground">
+          Visão rápida da operação para priorizar o que precisa de ação humana agora.
+        </p>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-5">
         {metricCards.map((metric) => (
-          <MetricCard key={metric.label} {...metric} />
+          <MetricCard
+            key={metric.label}
+            label={metric.label}
+            value={metric.value}
+            icon={metric.icon}
+            helper={metric.helper}
+            className={metric.className}
+          />
         ))}
       </section>
 
-      <StageStepper
-        steps={[
-          { id: "1", label: "Briefing", status: "completed" },
-          { id: "2", label: "Pesquisa", status: "running", active: true },
-          { id: "3", label: "Revisão", status: "awaiting_human_approval" },
-          { id: "4", label: "Entrega", status: "not_started" },
-        ]}
-      />
-
-      <StageActionToolbar />
-
-      <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+      <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <SystemCard
-          title="Lista de workflows"
-          description="Padrão de tabela para acompanhamento de execução com status e ação rápida."
+          title="Ação necessária agora"
+          description="Workflows com revisão/aprovação humana pendente para não comprometer SLA."
         >
-          {isLoading ? (
-            <WorkflowListSkeleton />
-          ) : data && data.length > 0 ? (
-            <WorkflowTable workflows={data} />
-          ) : (
+          {pendingApproval.length === 0 ? (
             <EmptyState
-              icon={Archive}
-              title="Nenhum workflow encontrado"
-              description="Crie o primeiro fluxo para iniciar a orquestração com checkpoints de aprovação humana."
-              actionLabel="Criar workflow"
+              icon={ShieldCheck}
+              title="Nenhuma ação humana pendente"
+              description="Ótimo trabalho. Não há aprovações pendentes neste momento."
             />
+          ) : (
+            <div className="space-y-3">
+              {pendingApproval.map((workflow) => (
+                <div key={workflow.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{workflow.name}</p>
+                      <p className="text-xs text-muted-foreground">{workflow.id}</p>
+                    </div>
+                    <StatusPill status={workflow.status} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">Última atualização: {formatDateTime(workflow.updatedAt)}</p>
+                    <Link
+                      href={`/workflows/${workflow.id}`}
+                      className={cn(buttonVariants({ size: "sm" }), "gap-2")}
+                    >
+                      Abrir workflow
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </SystemCard>
 
-        <div className="space-y-4">
-          <QuickWorkflowForm />
-          <ContextPanel />
-        </div>
+        <SystemCard title="Health da API" description="Resumo de disponibilidade para tomada de decisão rápida.">
+          {healthQuery.isLoading ? (
+            <div className="space-y-3">
+              <SystemSkeleton className="h-16 rounded-lg" />
+              <SystemSkeleton className="h-10 rounded-lg" />
+              <SystemSkeleton className="h-10 rounded-lg" />
+            </div>
+          ) : healthQuery.isError ? (
+            <AlertBanner
+              tone="warning"
+              title="Health indisponível"
+              description="Não foi possível buscar o status da API agora. Tente novamente em instantes."
+            />
+          ) : (
+            <div className="space-y-3">
+              <AlertBanner
+                tone={getHealthTone(healthStatus)}
+                title={`Status geral: ${healthStatus ?? "indisponível"}`}
+                description={`Serviço: ${healthQuery.data?.service ?? "API"} • Versão: ${healthQuery.data?.version ?? "n/d"}`}
+              />
+              <p className="text-xs text-muted-foreground">Última verificação: {formatDateTime(healthQuery.data?.timestamp)}</p>
+              {dependencies.length > 0 ? (
+                <ul className="space-y-2">
+                  {dependencies.map(([name, status]) => (
+                    <li key={name} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                      <span className="font-medium">{name}</span>
+                      <span className="text-muted-foreground">{String(status)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Dependências não informadas pela API.</p>
+              )}
+            </div>
+          )}
+        </SystemCard>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <ArtifactCard name="Resumo de análise" type="application/pdf" updatedAt="Atualizado há 9 min" />
-        <ActionCard
-          icon={ClipboardCheck}
-          title="Revisar artefatos"
-          description="Valide conteúdo gerado por IA antes de aprovar o estágio."
-          cta="Abrir revisão"
-        />
-        <ActionCard
-          icon={FilePlus2}
-          title="Adicionar instrução"
-          description="Anexe nova diretriz operacional para manter rastreabilidade."
-          cta="Adicionar"
-        />
-      </section>
+      <SystemCard
+        title="Workflows recentes"
+        description="Panorama com contexto operacional e próxima ação sugerida para cada fluxo."
+      >
+        {recentWorkflows.length === 0 ? (
+          <EmptyState
+            icon={Workflow}
+            title="Nenhum workflow recente"
+            description="Quando workflows forem criados, eles aparecerão aqui com status e próxima ação sugerida."
+          />
+        ) : (
+          <div className="overflow-hidden rounded-xl border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-[0.06em] text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Nome</th>
+                  <th className="px-4 py-3">Workflow ID</th>
+                  <th className="px-4 py-3">Estágio atual</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Última atualização</th>
+                  <th className="px-4 py-3">Próxima ação</th>
+                  <th className="px-4 py-3 text-right">CTA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentWorkflows.map((workflow) => (
+                  <tr key={workflow.id} className="border-t align-top">
+                    <td className="px-4 py-3 font-medium">{workflow.name}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{workflow.id}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{getCurrentStageLabel(workflow)}</td>
+                    <td className="px-4 py-3">
+                      <StatusPill status={workflow.status} showIcon={false} />
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDateTime(workflow.updatedAt ?? workflow.createdAt)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{getNextAction(workflow)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Link href={`/workflows/${workflow.id}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-2")}>
+                        Abrir
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SystemCard>
     </div>
   );
 }
