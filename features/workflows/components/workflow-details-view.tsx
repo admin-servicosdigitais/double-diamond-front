@@ -16,6 +16,7 @@ import {
 } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { HumanApprovalDialog } from "@/features/workflows/components/human-approval-dialog";
 import { useApproveStageMutation, useNextStageMutation, useRunStageMutation, useStageOutputsQuery, useWorkflowQuery } from "@/hooks/api/use-domain-api";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, inferStageSummary, mergeStageWithBlueprint } from "@/lib/workflow/stages";
@@ -78,6 +79,10 @@ function getOutputsSummary(outputs: StageOutput[] | undefined): Artifact[] {
 
 export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   const [selectedStageNumber, setSelectedStageNumber] = useState<number>(1);
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const [approvalNotes, setApprovalNotes] = useState("");
+  const [humanReviewed, setHumanReviewed] = useState(false);
+  const [justApprovedStage, setJustApprovedStage] = useState<number | null>(null);
 
   const workflowQuery = useWorkflowQuery(workflowId);
   const runStageMutation = useRunStageMutation();
@@ -112,20 +117,42 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
       effectiveSelectedStage?.status === "awaiting_human_approval" ||
       effectiveSelectedStage?.status === "running",
   );
-  const nextBlockedByApproval = effectiveSelectedStage?.status !== "approved";
+  const nextBlockedByApproval =
+    effectiveSelectedStage?.status !== "approved" && justApprovedStage !== effectiveSelectedStage?.stage;
+  const shouldShowApproveAction = Boolean(
+    canApprove &&
+      (effectiveSelectedStage?.status === "awaiting_human_approval" ||
+        effectiveSelectedStage?.requiresApproval ||
+        effectiveSelectedStage?.stage === 7 ||
+        effectiveSelectedStage?.status === "running"),
+  );
 
   const isMutating = runStageMutation.isPending || approveStageMutation.isPending || nextStageMutation.isPending;
 
   const runStage = async () => {
     if (!effectiveSelectedStage) return;
-    await runStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stage });
-    systemToast.success("Estágio em execução", `Estágio ${effectiveSelectedStage.stage} iniciado com sucesso.`);
+    try {
+      await runStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stage });
+      systemToast.success("Estágio em execução", `Estágio ${effectiveSelectedStage.stage} iniciado com sucesso.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível iniciar o estágio agora.";
+      systemToast.error("Erro ao executar", message);
+    }
   };
 
   const approveStage = async () => {
     if (!effectiveSelectedStage) return;
-    await approveStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stage });
-    systemToast.success("Estágio aprovado", `Estágio ${effectiveSelectedStage.stage} aprovado.`);
+    try {
+      await approveStageMutation.mutateAsync({ workflowId, stage: effectiveSelectedStage.stage });
+      setJustApprovedStage(effectiveSelectedStage.stage);
+      setApprovalOpen(false);
+      setHumanReviewed(false);
+      setApprovalNotes("");
+      systemToast.success("Estágio aprovado", `Estágio ${effectiveSelectedStage.stage} aprovado.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível registrar a aprovação agora.";
+      systemToast.error("Erro ao aprovar", message);
+    }
   };
 
   const nextStage = async () => {
@@ -135,13 +162,18 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
       return;
     }
 
-    await nextStageMutation.mutateAsync({
-      workflowId,
-      stage: effectiveSelectedStage.stage,
-      currentStage: effectiveSelectedStage,
-    });
+    try {
+      await nextStageMutation.mutateAsync({
+        workflowId,
+        stage: effectiveSelectedStage.stage,
+        currentStage: effectiveSelectedStage,
+      });
 
-    systemToast.success("Workflow avançado", "Próximo estágio liberado com sucesso.");
+      systemToast.success("Workflow avançado", "Próximo estágio liberado com sucesso.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível avançar o workflow agora.";
+      systemToast.error("Erro ao avançar", message);
+    }
   };
 
   if (workflowQuery.isLoading) {
@@ -238,6 +270,9 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusPill status={effectiveSelectedStage.status} />
                 <Badge variant="outline">Resumo: {stageSummary}</Badge>
+                {effectiveSelectedStage.status === "approved" || justApprovedStage === effectiveSelectedStage.stage ? (
+                  <Badge className="border-emerald-800 bg-emerald-600 text-white">APPROVED</Badge>
+                ) : null}
               </div>
               <p className="flex items-center gap-2 text-muted-foreground">
                 <History className="h-4 w-4" />
@@ -301,10 +336,12 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
               Revisar outputs
             </Link>
 
-            <Button className="w-full justify-start gap-2" variant="secondary" onClick={approveStage} disabled={!canApprove || isMutating}>
-              <CheckCircle2 className="h-4 w-4" />
-              Aprovar estágio
-            </Button>
+            {shouldShowApproveAction ? (
+              <Button className="w-full justify-start gap-2" variant="secondary" onClick={() => setApprovalOpen(true)} disabled={isMutating}>
+                <CheckCircle2 className="h-4 w-4" />
+                Aprovar estágio
+              </Button>
+            ) : null}
 
             <Button className="w-full justify-start gap-2" variant="default" onClick={nextStage} disabled={nextBlockedByApproval || isMutating}>
               <SkipForward className="h-4 w-4" />
@@ -327,9 +364,34 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
                 O avanço só é permitido após aprovação humana explícita deste estágio.
               </p>
             ) : null}
+
+            {effectiveSelectedStage.status === "approved" || justApprovedStage === effectiveSelectedStage.stage ? (
+              <p className="rounded-lg border-2 border-emerald-500 bg-emerald-50 p-2 text-xs font-semibold text-emerald-900">
+                Aprovação registrada com sucesso. O próximo passo já está disponível.
+              </p>
+            ) : null}
           </div>
         </SystemCard>
       </div>
+
+      <HumanApprovalDialog
+        open={approvalOpen}
+        stageNumber={effectiveSelectedStage.stage}
+        stageName={effectiveSelectedStage.name}
+        stageStatusLabel={effectiveSelectedStage.status}
+        stageSummary={stageSummary}
+        outputs={artifacts}
+        notes={approvalNotes}
+        onNotesChange={setApprovalNotes}
+        reviewed={humanReviewed}
+        onReviewedChange={setHumanReviewed}
+        onClose={() => {
+          setApprovalOpen(false);
+          setHumanReviewed(false);
+        }}
+        onConfirm={approveStage}
+        isSubmitting={isMutating}
+      />
     </div>
   );
 }
