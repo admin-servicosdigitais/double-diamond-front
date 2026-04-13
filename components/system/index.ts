@@ -12,3 +12,4 @@ export * from "./system-card";
 export * from "./system-skeleton";
 export * from "./workflow-table";
 export * from "./system-toast";
+export * from "./workflow-journey-stepper";
