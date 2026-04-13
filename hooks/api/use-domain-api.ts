@@ -52,6 +52,19 @@ export function useWorkflowsQuery() {
   });
 }
 
+
+export function useCreateWorkflowMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: workflowsService.create,
+    onSuccess: (createdWorkflow) => {
+      queryClient.invalidateQueries({ queryKey: domainQueryKeys.workflows });
+      queryClient.setQueryData(domainQueryKeys.workflow(createdWorkflow.id), createdWorkflow);
+    },
+    meta: { friendlyError: getErrorMessage },
+  });
+}
 export function useWorkflowQuery(workflowId: string) {
   return useQuery({
     queryKey: domainQueryKeys.workflow(workflowId),
