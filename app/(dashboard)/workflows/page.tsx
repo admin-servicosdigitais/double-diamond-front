@@ -1,19 +1,22 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageScaffold } from "@/components/layout/page-scaffold";
 
 export default function WorkflowsPage() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Módulo de Workflows</CardTitle>
-        <CardDescription>
-          Esta página está pronta para receber listagem avançada, detalhamento por estágio e ações de aprovação humana.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground">
-          Próximo passo: conectar filtros, timeline de execução e editor de artefatos com o backend REST.
-        </p>
-      </CardContent>
-    </Card>
+    <PageScaffold
+      section="Workflows"
+      title="Visão geral dos workflows"
+      description="Acompanhe execução, aprovações humanas e gargalos operacionais de ponta a ponta."
+      primaryAction={{ label: "Criar workflow", href: "/workflows/new" }}
+      availableActions={[
+        "Filtrar workflows por status e prioridade",
+        "Entrar no detalhe de um workflow para revisar estágios",
+        "Navegar para outputs gerados por cada estágio",
+      ]}
+      pendingItems={[
+        "Conectar listagem ao backend com paginação",
+        "Definir métricas de SLA por tipo de workflow",
+        "Instrumentar telemetria para tempo médio por estágio",
+      ]}
+    />
   );
 }
