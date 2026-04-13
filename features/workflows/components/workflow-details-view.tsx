@@ -3,14 +3,16 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
-import { AlertCircle, AlertTriangle, CheckCircle2, History, ListChecks, Play, RotateCcw, SkipForward } from "lucide-react";
+import { AlertTriangle, CheckCircle2, History, ListChecks, Play, RotateCcw, SkipForward } from "lucide-react";
 
 import {
   AlertBanner,
   EmptyState,
+  PremiumPageSkeleton,
   StatusPill,
   SystemCard,
   SystemSkeleton,
+  UXStateCard,
   WorkflowJourneyStepper,
   systemToast,
 } from "@/components/system";
@@ -30,7 +32,7 @@ function getOperationalMessages(stage: Stage) {
     messages.push({
       tone: "warning",
       title: "Aguardando aprovação humana",
-      description: "Este estágio depende de decisão humana para liberar o avanço para o próximo estágio.",
+      description: "A jornada depende de uma decisão humana explícita. Abra a aprovação para validar evidências e liberar continuidade.",
     });
   }
 
@@ -196,25 +198,16 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
   };
 
   if (workflowQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <SystemSkeleton className="h-20 w-full rounded-xl" />
-        <SystemSkeleton className="h-36 w-full rounded-xl" />
-        <div className="grid gap-4 xl:grid-cols-[1.8fr_1fr]">
-          <SystemSkeleton className="h-80 w-full rounded-xl" />
-          <SystemSkeleton className="h-80 w-full rounded-xl" />
-        </div>
-      </div>
-    );
+    return <PremiumPageSkeleton />;
   }
 
   if (workflowQuery.isError || !workflow) {
     return (
-      <EmptyState
-        icon={AlertCircle}
-        title="Não foi possível carregar o workflow"
-        description="Falha ao buscar dados do workflow. Tente novamente para restaurar a visão central da jornada."
-        actionLabel="Tentar novamente"
+      <UXStateCard
+        kind="error"
+        title="Não conseguimos abrir este workflow no momento"
+        description="Recarregue para recuperar a jornada completa, os bloqueios ativos e as ações disponíveis."
+        actionLabel="Reabrir workflow"
         onAction={() => workflowQuery.refetch()}
       />
     );
@@ -268,10 +261,11 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
       </SystemCard>
 
       {effectiveSelectedStage.status === "blocked" ? (
-        <AlertBanner
-          tone="critical"
-          title="Bloqueio forte detectado"
-          description="Este estágio está bloqueado. Resolva as dependências para habilitar execução, aprovação e avanço."
+        <UXStateCard
+          kind="blocked"
+          title="Fluxo temporariamente bloqueado neste estágio"
+          description="Regularize as dependências sinalizadas e depois reexecute o estágio para liberar aprovação e avanço."
+          actionLabel="Ver dependências"
         />
       ) : null}
 
@@ -315,8 +309,10 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
             ) : artifacts.length === 0 ? (
               <EmptyState
                 icon={ListChecks}
-                title="Nenhum artefato recente"
-                description="Execute o estágio para gerar outputs e acompanhar os artefatos aqui."
+                title="Ainda não há artefatos publicados"
+                description="Execute este estágio para gerar evidências e liberar revisão operacional nesta seção."
+                actionLabel="Executar estágio"
+                onAction={runStage}
               />
             ) : (
               <ul className="space-y-2">
@@ -385,7 +381,7 @@ export function WorkflowDetailsView({ workflowId }: { workflowId: string }) {
             {nextBlockedByApproval ? (
               <p className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
                 <AlertTriangle className="h-4 w-4" />
-                Bloqueado: aprove o estágio atual para habilitar o avanço.
+                Próximo passo bloqueado: conclua a aprovação do estágio atual para liberar o avanço com segurança.
               </p>
             ) : null}
 

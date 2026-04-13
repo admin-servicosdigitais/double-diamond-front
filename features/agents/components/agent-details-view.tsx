@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { AlertCircle, ArrowLeft, ListTree } from "lucide-react";
 
-import { EmptyState, SystemCard, SystemSkeleton } from "@/components/system";
+import { PremiumPageSkeleton, SystemCard, UXStateCard } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAgentQuery } from "@/hooks/api/use-domain-api";
@@ -36,21 +36,16 @@ export function AgentDetailsView({ agentId }: { agentId: string }) {
   const agent = agentQuery.data;
 
   if (agentQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <SystemSkeleton className="h-28 w-full rounded-xl" />
-        <SystemSkeleton className="h-80 w-full rounded-xl" />
-      </div>
-    );
+    return <PremiumPageSkeleton />;
   }
 
   if (agentQuery.isError || !agent) {
     return (
-      <EmptyState
-        icon={AlertCircle}
-        title="Não foi possível carregar o agente"
-        description="Falha ao buscar os detalhes deste agente. Tente novamente em instantes."
-        actionLabel="Tentar novamente"
+      <UXStateCard
+        kind="error"
+        title="Não conseguimos carregar o perfil deste agente"
+        description="Recarregue para recuperar modelo, responsabilidades e rastreabilidade operacional."
+        actionLabel="Recarregar perfil"
         onAction={() => agentQuery.refetch()}
       />
     );

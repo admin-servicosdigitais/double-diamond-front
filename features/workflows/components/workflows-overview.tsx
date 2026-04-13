@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { AlertCircle, Plus, Workflow } from "lucide-react";
 
-import { EmptyState, WorkflowListSkeleton, WorkflowTable } from "@/components/system";
+import { EmptyState, PremiumTableSkeleton, UXStateCard, WorkflowTable } from "@/components/system";
 import { Button } from "@/components/ui/button";
 import { useWorkflows } from "@/hooks/use-workflows";
 import { getNextActionLabel } from "@/lib/workflow/display";
@@ -67,20 +67,25 @@ export function WorkflowsOverview() {
       />
 
       {workflowsQuery.isLoading ? (
-        <WorkflowListSkeleton />
+        <PremiumTableSkeleton rows={5} />
       ) : workflowsQuery.isError ? (
-        <EmptyState
-          icon={AlertCircle}
-          title="Não foi possível carregar workflows"
-          description="Houve uma falha ao buscar a lista. Atualize a página para tentar novamente."
-          actionLabel="Tentar novamente"
+        <UXStateCard
+          kind="error"
+          title="Não conseguimos carregar seus workflows agora"
+          description="Parece uma oscilação momentânea. Recarregue para restaurar a fila de execução e as prioridades do dia."
+          actionLabel="Recarregar workflows"
           onAction={() => workflowsQuery.refetch()}
         />
       ) : filteredWorkflows.length === 0 ? (
         <EmptyState
           icon={Workflow}
-          title="Nenhum workflow encontrado"
-          description="Ajuste a busca ou o filtro de status para encontrar um workflow específico."
+          title="Nenhum workflow corresponde aos filtros atuais"
+          description="Refine os filtros para localizar um fluxo existente ou crie um novo workflow para começar a operar."
+          actionLabel="Limpar filtros"
+          onAction={() => {
+            setSearchTerm("");
+            setSelectedStatus("all");
+          }}
         />
       ) : (
         <WorkflowTable workflows={filteredWorkflows} />

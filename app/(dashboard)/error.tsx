@@ -2,8 +2,7 @@
 
 import { useEffect } from "react";
 
-import { AlertBanner } from "@/components/system";
-import { Button } from "@/components/ui/button";
+import { UXStateCard } from "@/components/system";
 
 export default function DashboardError({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
@@ -11,13 +10,12 @@ export default function DashboardError({ error, reset }: { error: Error; reset: 
   }, [error]);
 
   return (
-    <div className="space-y-4">
-      <AlertBanner
-        tone="warning"
-        title="Não foi possível carregar esta página"
-        description="Tente novamente. Se o problema persistir, valide conectividade da API e permissões da sessão."
-      />
-      <Button onClick={reset}>Tentar novamente</Button>
-    </div>
+    <UXStateCard
+      kind="error"
+      title="A experiência do dashboard ficou temporariamente indisponível"
+      description="Já registramos o incidente. Tente novamente para recuperar métricas, filas e próximos passos da operação."
+      actionLabel="Recarregar dashboard"
+      onAction={reset}
+    />
   );
 }

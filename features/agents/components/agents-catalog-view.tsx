@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { AlertCircle, ArrowRight, Bot } from "lucide-react";
 
-import { EmptyState, SystemSkeleton } from "@/components/system";
+import { EmptyState, PremiumPageSkeleton, UXStateCard } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,25 +30,16 @@ export function AgentsCatalogView() {
   const agents = agentsQuery.data ?? [];
 
   if (agentsQuery.isLoading) {
-    return (
-      <div className="space-y-4">
-        <SystemSkeleton className="h-20 w-full rounded-xl" />
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <SystemSkeleton key={index} className="h-44 w-full rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
+    return <PremiumPageSkeleton />;
   }
 
   if (agentsQuery.isError) {
     return (
-      <EmptyState
-        icon={AlertCircle}
-        title="Não foi possível carregar os agentes"
-        description="Houve uma falha ao buscar o catálogo. Tente novamente para visualizar os agentes disponíveis."
-        actionLabel="Tentar novamente"
+      <UXStateCard
+        kind="error"
+        title="Não conseguimos abrir o catálogo de agentes"
+        description="Houve uma oscilação ao consultar o inventário. Recarregue para recuperar a lista completa."
+        actionLabel="Recarregar catálogo"
         onAction={() => agentsQuery.refetch()}
       />
     );
@@ -58,8 +49,8 @@ export function AgentsCatalogView() {
     return (
       <EmptyState
         icon={Bot}
-        title="Nenhum agente cadastrado"
-        description="Quando novos agentes forem registrados, eles aparecerão aqui com stage, role e descrição."
+        title="Catálogo vazio por enquanto"
+        description="Cadastre o primeiro agente para começar a distribuir responsabilidades por estágio e papel."
       />
     );
   }

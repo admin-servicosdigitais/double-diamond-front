@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { AlertCircle, ArrowRight, CheckCircle2, Clock3, LoaderCircle, ShieldCheck, Workflow } from "lucide-react";
 
-import { AlertBanner, EmptyState, MetricCard, StatusPill, SystemCard, SystemSkeleton } from "@/components/system";
+import { AlertBanner, EmptyState, MetricCard, PremiumPageSkeleton, StatusPill, SystemCard, UXStateCard } from "@/components/system";
 import { buttonVariants } from "@/components/ui/button";
 import { useHealthQuery, useWorkflowsQuery } from "@/hooks/api/use-domain-api";
 import { cn } from "@/lib/utils";
@@ -52,23 +52,7 @@ function getHealthTone(status?: HealthStatus) {
 }
 
 function DashboardSkeleton() {
-  return (
-    <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <SystemSkeleton key={index} className="h-32 rounded-xl" />
-        ))}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <SystemSkeleton className="h-60 rounded-xl" />
-        <SystemSkeleton className="h-60 rounded-xl" />
-      </section>
-
-      <SystemSkeleton className="h-96 rounded-xl" />
-      <SystemSkeleton className="h-40 rounded-xl" />
-    </div>
-  );
+  return <PremiumPageSkeleton />;
 }
 
 export function DashboardOverview() {
@@ -81,10 +65,12 @@ export function DashboardOverview() {
 
   if (workflowsQuery.isError) {
     return (
-      <EmptyState
-        icon={AlertCircle}
-        title="Não foi possível carregar o dashboard"
-        description="Falha ao buscar os workflows. Atualize a página para tentar novamente em alguns segundos."
+      <UXStateCard
+        kind="error"
+        title="Não conseguimos montar a visão executiva do dashboard"
+        description="Recarregue em alguns segundos para restaurar indicadores, filas críticas e recomendações de ação."
+        actionLabel="Atualizar dashboard"
+        onAction={() => workflowsQuery.refetch()}
       />
     );
   }
@@ -149,8 +135,8 @@ export function DashboardOverview() {
           {pendingApproval.length === 0 ? (
             <EmptyState
               icon={ShieldCheck}
-              title="Nenhuma ação humana pendente"
-              description="Ótimo trabalho. Não há aprovações pendentes neste momento."
+              title="Tudo em dia nas aprovações humanas"
+              description="Excelente ritmo: não há decisões pendentes bloqueando o SLA neste momento."
             />
           ) : (
             <div className="space-y-3">
@@ -187,10 +173,12 @@ export function DashboardOverview() {
               <SystemSkeleton className="h-10 rounded-lg" />
             </div>
           ) : healthQuery.isError ? (
-            <AlertBanner
-              tone="warning"
-              title="Health indisponível"
-              description="Não foi possível buscar o status da API agora. Tente novamente em instantes."
+            <UXStateCard
+              kind="error"
+              title="Monitoramento de health indisponível"
+              description="Sem telemetria agora, mas o produto segue disponível. Atualize para recuperar visibilidade dos serviços."
+              actionLabel="Atualizar health"
+              onAction={() => healthQuery.refetch()}
             />
           ) : (
             <div className="space-y-3">
@@ -224,8 +212,8 @@ export function DashboardOverview() {
         {recentWorkflows.length === 0 ? (
           <EmptyState
             icon={Workflow}
-            title="Nenhum workflow recente"
-            description="Quando workflows forem criados, eles aparecerão aqui com status e próxima ação sugerida."
+            title="Seu painel ainda não tem workflows recentes"
+            description="Assim que novos fluxos forem iniciados, você verá aqui status, risco e próxima ação recomendada."
           />
         ) : (
           <div className="overflow-hidden rounded-xl border">
