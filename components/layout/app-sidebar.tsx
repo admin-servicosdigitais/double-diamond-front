@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, Rocket, Workflow } from "lucide-react";
+import { Activity, Bot, LayoutDashboard, Workflow } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,9 +8,10 @@ import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/workflows", label: "Workflows", icon: Workflow },
-  { href: "/launchpad", label: "Launchpad", icon: Rocket },
+  { href: "/agents", label: "Agents", icon: Bot },
+  { href: "/health", label: "System Health", icon: Activity },
 ];
 
 export function AppSidebar() {
@@ -18,14 +19,19 @@ export function AppSidebar() {
   const sidebarCollapsed = useUiStore((state) => state.sidebarCollapsed);
 
   return (
-    <aside className={cn("border-r bg-card transition-all", sidebarCollapsed ? "w-[84px]" : "w-72")}>
+    <aside
+      className={cn(
+        "border-r bg-card transition-all",
+        sidebarCollapsed ? "w-[72px]" : "w-56 sm:w-72",
+      )}
+    >
       <div className="flex h-16 items-center border-b px-5">
         <p className="text-sm font-semibold tracking-wide text-primary">Double Diamond Ops</p>
       </div>
 
       <nav className="flex flex-col gap-1 p-3">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={label}
@@ -37,7 +43,7 @@ export function AppSidebar() {
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               {!sidebarCollapsed && <span>{label}</span>}
             </Link>
           );
