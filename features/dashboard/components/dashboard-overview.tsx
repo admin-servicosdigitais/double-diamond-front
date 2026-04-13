@@ -53,7 +53,7 @@ export function DashboardOverview() {
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoading && <p className="text-sm text-muted-foreground">Carregando workflows...</p>}
-            {data?.data.map((workflow) => (
+            {data?.map((workflow) => (
               <div key={workflow.id} className="rounded-lg border p-3">
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{workflow.name}</p>
@@ -61,7 +61,7 @@ export function DashboardOverview() {
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{workflow.description}</p>
                 <Separator className="my-3" />
-                <p className="text-xs text-muted-foreground">Estágios: {workflow.stages.length}</p>
+                <p className="text-xs text-muted-foreground">Estágios: {workflow.stages?.length ?? 0}</p>
               </div>
             ))}
           </CardContent>
