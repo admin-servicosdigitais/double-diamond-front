@@ -21,6 +21,10 @@ function toStageParam(stage: number | string) {
   return encodeURIComponent(String(stage));
 }
 
+function toArtifactParam(artifactName: string) {
+  return encodeURIComponent(artifactName);
+}
+
 export const workflowsService = {
   async create(payload: CreateWorkflowPayload): Promise<Workflow> {
     const response = await apiRequest<unknown>("/workflows", { method: "POST", body: payload });
@@ -92,15 +96,20 @@ export const workflowsService = {
   },
 
   async getArtifact(workflowId: string, stage: number | string, artifactName: string): Promise<Artifact> {
-    const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs/${artifactName}`);
+    const response = await apiRequest<unknown>(
+      `/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs/${toArtifactParam(artifactName)}`,
+    );
     return normalizeArtifactResponse(response, artifactName);
   },
 
   async patchArtifact(workflowId: string, stage: number | string, artifactName: string, payload: PatchArtifactPayload): Promise<Artifact> {
-    const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs/${artifactName}`, {
-      method: "PATCH",
-      body: { content: payload.content },
-    });
+    const response = await apiRequest<unknown>(
+      `/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs/${toArtifactParam(artifactName)}`,
+      {
+        method: "PATCH",
+        body: { content: payload.content },
+      },
+    );
     return normalizeArtifactResponse(response, artifactName);
   },
 };
