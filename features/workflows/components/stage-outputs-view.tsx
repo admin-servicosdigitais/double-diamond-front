@@ -177,7 +177,11 @@ export function StageOutputsView({ workflowId, stageId }: { workflowId: string; 
         <EmptyState
           icon={FileText}
           title="Nenhum output publicado até agora"
-          description="Assim que a etapa for executada, os artefatos aparecerão aqui com prévia, tipo e acesso rápido para revisão."
+          description={
+            stage.status === "running" || stage.status === "awaiting_human_approval"
+              ? "O estágio já foi disparado e os outputs iniciais ainda estão sendo gerados. Atualize a página em instantes para acompanhar os artefatos."
+              : "Assim que a etapa for executada, os artefatos aparecerão aqui com prévia, tipo e acesso rápido para revisão."
+          }
         />
       ) : (
         <SystemCard
