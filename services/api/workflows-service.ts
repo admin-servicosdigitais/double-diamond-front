@@ -1,4 +1,4 @@
-import { apiRequest } from "@/services/api/client";
+import { ApiError, apiRequest } from "@/services/api/client";
 import {
   normalizeArtifactResponse,
   normalizeStage,
@@ -75,8 +75,15 @@ export const workflowsService = {
   },
 
   async getStageOutputs(workflowId: string, stage: number | string): Promise<ApiListResponse<StageOutput> | StageOutput[]> {
-    const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs`);
-    return normalizeStageOutputs(response, stage);
+    try {
+      const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs`);
+      return normalizeStageOutputs(response, stage);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   async getLatestAgentOutput(workflowId: string, agentCode: string): Promise<StageOutput> {

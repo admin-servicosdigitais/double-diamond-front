@@ -3,11 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, X } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { systemToast, SystemCard } from "@/components/system";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCreateWorkflowMutation } from "@/hooks/api/use-domain-queries";
@@ -20,6 +22,7 @@ const newWorkflowSchema = z.object({
     .max(80, "Use no máximo 80 caracteres.")
     .regex(/^[a-zA-Z0-9_-]+$/, "Use apenas letras, números, hífen e underscore."),
   name: z.string().min(3, "Informe um nome com ao menos 3 caracteres.").max(120, "Use no máximo 120 caracteres."),
+  words: z.array(z.string().min(1)).min(1, "Adicione ao menos 1 palavra-chave para iniciar o workflow."),
 });
 
 type NewWorkflowFormValues = z.infer<typeof newWorkflowSchema>;
@@ -33,8 +36,11 @@ export function NewWorkflowForm() {
     defaultValues: {
       workflow_id: "",
       name: "",
+      words: [],
     },
   });
+  const words = form.watch("words");
+  const [wordInput, setWordInput] = useState("");
 
   const onSubmit = async (values: NewWorkflowFormValues) => {
     form.clearErrors("root");
@@ -43,7 +49,7 @@ export function NewWorkflowForm() {
       const created = await createWorkflow.mutateAsync({
         workflow_id: values.workflow_id,
         name: values.name,
-        words: [values.name],
+        words: values.words,
       });
 
       const createdWorkflowId = created.id || values.workflow_id;
@@ -63,6 +69,26 @@ export function NewWorkflowForm() {
   };
 
   const isSubmitting = form.formState.isSubmitting || createWorkflow.isPending;
+
+  const addWord = (rawWord: string) => {
+    const normalizedWord = rawWord.trim();
+    if (!normalizedWord) return;
+
+    const currentWords = form.getValues("words");
+    if (currentWords.some((word) => word.toLowerCase() === normalizedWord.toLowerCase())) {
+      setWordInput("");
+      return;
+    }
+
+    form.setValue("words", [...currentWords, normalizedWord], { shouldDirty: true, shouldValidate: true });
+    setWordInput("");
+    form.clearErrors("words");
+  };
+
+  const removeWord = (wordToRemove: string) => {
+    const filteredWords = form.getValues("words").filter((word) => word !== wordToRemove);
+    form.setValue("words", filteredWords, { shouldDirty: true, shouldValidate: true });
+  };
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -105,6 +131,47 @@ export function NewWorkflowForm() {
             />
             <p className="text-xs text-muted-foreground">Nome amigável para facilitar busca e colaboração entre operadores.</p>
             {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="words" className="text-sm font-medium">
+              words
+            </label>
+            <Input
+              id="words"
+              value={wordInput}
+              onChange={(event) => setWordInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                addWord(wordInput);
+              }}
+              placeholder="Digite uma palavra e pressione Enter"
+              aria-invalid={Boolean(form.formState.errors.words)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Palavras-chave para disparar o workflow. Pressione Enter para adicionar cada termo.
+            </p>
+
+            {words.length > 0 ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {words.map((word) => (
+                  <Badge key={word} variant="secondary" className="gap-1 pr-1">
+                    {word}
+                    <button
+                      type="button"
+                      onClick={() => removeWord(word)}
+                      className="rounded-sm p-0.5 text-muted-foreground transition hover:text-foreground"
+                      aria-label={`Remover palavra ${word}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+
+            {form.formState.errors.words && <p className="text-xs text-destructive">{form.formState.errors.words.message}</p>}
           </div>
 
           {form.formState.errors.root && <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>}
