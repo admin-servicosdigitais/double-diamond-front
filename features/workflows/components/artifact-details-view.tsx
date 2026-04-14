@@ -260,6 +260,28 @@ export function ArtifactDetailsView({
     [outputsQuery.data, decodedArtifactName]
   );
 
+  const artifact = artifactQuery.data;
+  const content = artifact?.content ?? artifactOutput?.content ?? artifactOutput?.summary ?? "";
+  const hasUnsavedChanges = isEditing && (editedContent !== content || reason.trim().length > 0);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedContent(content);
+    }
+  }, [content, isEditing]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   if (workflowQuery.isLoading || outputsQuery.isLoading || artifactQuery.isLoading) {
     return (
       <div className="space-y-4">
@@ -295,30 +317,9 @@ export function ArtifactDetailsView({
     );
   }
 
-  const artifact = artifactQuery.data;
-  const content = artifact.content ?? artifactOutput?.content ?? artifactOutput?.summary ?? "";
-  const hasUnsavedChanges = isEditing && (editedContent !== content || reason.trim().length > 0);
   const renderMode = detectRenderableMode(content, artifact.mimeType, artifact.name);
   const previewMode = detectRenderableMode(editedContent, artifact.mimeType, artifact.name);
   const shouldShowHumanEditedBadge = humanEdited || Boolean((artifact as { editedByHuman?: boolean }).editedByHuman);
-
-  useEffect(() => {
-    if (!isEditing) {
-      setEditedContent(content);
-    }
-  }, [content, isEditing]);
-
-  useEffect(() => {
-    if (!hasUnsavedChanges) return;
-
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [hasUnsavedChanges]);
 
   const askForLeaveConfirmation = (action: () => void) => {
     if (hasUnsavedChanges) {
