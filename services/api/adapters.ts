@@ -64,13 +64,16 @@ function normalizeArtifact(name: string, payload: unknown): Artifact {
 function normalizeStageOutput(payload: unknown, stage: number, stageKey?: string): StageOutput {
   const data = asRecord(payload);
   const metadata = asRecord(data.metadata);
+  const compactOutputPath = asString(data.compact_output_path) || asString(metadata.compact_output_path);
 
   const artifacts: Artifact[] = [];
   const compact = asString(data.compact_output_text);
   if (compact) {
+    const compactFileName = compactOutputPath.split("/").pop() || `stage-${stage}-compact.md`;
     artifacts.push(
-      normalizeArtifact(`stage-${stage}-compact.md`, {
+      normalizeArtifact(compactFileName, {
         content: compact,
+        path: compactOutputPath,
         updated_at: metadata.updated_at ?? data.updated_at,
       }),
     );
