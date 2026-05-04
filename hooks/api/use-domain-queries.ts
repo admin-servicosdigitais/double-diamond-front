@@ -6,7 +6,7 @@ import { agentsService } from "@/services/api/agents-service";
 import { getErrorMessage } from "@/services/api/client";
 import { healthService } from "@/services/api/health-service";
 import { workflowsService } from "@/services/api/workflows-service";
-import type { PatchArtifactPayload, Stage } from "@/types/api/domain";
+import type { PatchArtifactPayload, QualityGateAnswer, Stage } from "@/types/api/domain";
 
 export const domainQueryKeys = {
   health: ["health"] as const,
@@ -182,6 +182,33 @@ export function usePatchArtifactMutation() {
       queryClient.invalidateQueries({ queryKey: domainQueryKeys.artifact(vars.workflowId, vars.stage, vars.artifactName) });
       queryClient.invalidateQueries({ queryKey: domainQueryKeys.stageOutputs(vars.workflowId, vars.stage) });
     },
+    retry: 0,
+    meta: { friendlyError: getErrorMessage },
+  });
+}
+
+export function useGenerateQualityGateMutation() {
+  return useMutation({
+    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number | string }) =>
+      workflowsService.generateQualityGate(workflowId, stage),
+    retry: 0,
+    meta: { friendlyError: getErrorMessage },
+  });
+}
+
+export function useAnswerQualityGateMutation() {
+  return useMutation({
+    mutationFn: ({ workflowId, stage, answers }: { workflowId: string; stage: number | string; answers: QualityGateAnswer[] }) =>
+      workflowsService.answerQualityGate(workflowId, stage, answers),
+    retry: 0,
+    meta: { friendlyError: getErrorMessage },
+  });
+}
+
+export function useSkipQualityGateMutation() {
+  return useMutation({
+    mutationFn: ({ workflowId, stage, reason }: { workflowId: string; stage: number | string; reason?: string }) =>
+      workflowsService.skipQualityGate(workflowId, stage, reason),
     retry: 0,
     meta: { friendlyError: getErrorMessage },
   });
