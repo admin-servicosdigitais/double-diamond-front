@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 
-import { AlertCircle, ArrowRight, Bot } from "lucide-react";
+import { ArrowRight, Bot } from "lucide-react";
 
 import { EmptyState, PremiumPageSkeleton, UXStateCard } from "@/components/system";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAgentsQuery } from "@/hooks/api/use-domain-queries";
 import type { Agent } from "@/types/api/domain";
 
@@ -38,8 +36,8 @@ export function AgentsCatalogView() {
       <UXStateCard
         kind="error"
         title="Não conseguimos abrir o catálogo de agentes"
-        description="Houve uma oscilação ao consultar o inventário. Recarregue para recuperar a lista completa."
-        actionLabel="Recarregar catálogo"
+        description="Recarregue para restaurar o inventário."
+        actionLabel="Recarregar"
         onAction={() => agentsQuery.refetch()}
       />
     );
@@ -49,43 +47,34 @@ export function AgentsCatalogView() {
     return (
       <EmptyState
         icon={Bot}
-        title="Catálogo vazio por enquanto"
-        description="Cadastre o primeiro agente para começar a distribuir responsabilidades por estágio e papel."
+        title="Catálogo vazio"
+        description="Cadastre o primeiro agente para começar a distribuir responsabilidades por estágio."
       />
     );
   }
 
   return (
-    <div className="space-y-5">
-      <section className="space-y-1">
-        <h1>Agents</h1>
-        <p className="text-sm text-muted-foreground">
-          Catálogo funcional dos agentes disponíveis no sistema, com foco em transparência de papel e estágio.
-        </p>
-      </section>
-
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {agents.map((agent) => (
-          <Card key={agent.id} className="border-border/80 bg-card/95 shadow-sm">
-            <CardHeader className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">Stage: {getAgentStage(agent)}</Badge>
-                <Badge variant="secondary">Role: {getAgentRole(agent)}</Badge>
-              </div>
-              <CardTitle className="text-base">{agent.name}</CardTitle>
-              <CardDescription className="line-clamp-3">{getShortDescription(agent)}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href={`/agents/${agent.id}`}>
-                <Button className="w-full justify-between" variant="outline">
-                  Ver detalhes
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {agents.map((agent) => (
+        <Link
+          key={agent.id}
+          href={`/agents/${agent.id}`}
+          className="focus-ring group flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 transition hover:border-border hover:bg-muted/30"
+        >
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] uppercase">{getAgentStage(agent)}</Badge>
+            <Badge variant="secondary" className="text-[10px] uppercase">{getAgentRole(agent)}</Badge>
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="text-base font-semibold text-foreground">{agent.name}</h3>
+            <p className="line-clamp-3 text-sm text-muted-foreground">{getShortDescription(agent)}</p>
+          </div>
+          <span className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition group-hover:opacity-100">
+            Abrir agente
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </Link>
+      ))}
     </div>
   );
 }

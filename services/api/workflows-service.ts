@@ -19,8 +19,8 @@ import type {
   Workflow,
 } from "@/types/api/domain";
 
-function toStageParam(stage: number | string) {
-  return encodeURIComponent(String(stage));
+function toStageParam(stage: string) {
+  return encodeURIComponent(stage);
 }
 
 function toArtifactParam(artifactName: string) {
@@ -52,7 +52,7 @@ export const workflowsService = {
     return normalizeWorkflow(response);
   },
 
-  async runStage(workflowId: string, stage: number | string): Promise<StageActionResponse> {
+  async runStage(workflowId: string, stage: string): Promise<StageActionResponse> {
     const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/run`, {
       method: "POST",
       body: {},
@@ -60,14 +60,14 @@ export const workflowsService = {
     return normalizeStageActionResponse(response, workflowId, stage);
   },
 
-  async approveStage(workflowId: string, stage: number | string): Promise<StageActionResponse> {
+  async approveStage(workflowId: string, stage: string): Promise<StageActionResponse> {
     const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/approve`, {
       method: "POST",
     });
     return normalizeStageActionResponse(response, workflowId, stage);
   },
 
-  async nextStage(workflowId: string, stage: number | string): Promise<StageActionResponse> {
+  async nextStage(workflowId: string, stage: string): Promise<StageActionResponse> {
     const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/next`, {
       method: "POST",
       body: {},
@@ -75,12 +75,12 @@ export const workflowsService = {
     return normalizeStageActionResponse(response, workflowId, stage);
   },
 
-  async getStage(workflowId: string, stage: number | string): Promise<Stage> {
+  async getStage(workflowId: string, stage: string): Promise<Stage> {
     const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}`);
     return normalizeStage(response, stage);
   },
 
-  async getStageOutputs(workflowId: string, stage: number | string): Promise<ApiListResponse<StageOutput> | StageOutput[]> {
+  async getStageOutputs(workflowId: string, stage: string): Promise<ApiListResponse<StageOutput> | StageOutput[]> {
     try {
       const response = await apiRequest<unknown>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs`);
       return normalizeStageOutputs(response, stage);
@@ -97,14 +97,14 @@ export const workflowsService = {
     return normalizeStageOutputs(response, "1")[0] ?? { stage: 1, artifacts: [] };
   },
 
-  async getArtifact(workflowId: string, stage: number | string, artifactName: string): Promise<Artifact> {
+  async getArtifact(workflowId: string, stage: string, artifactName: string): Promise<Artifact> {
     const response = await apiRequest<unknown>(
       `/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs/${toArtifactParam(artifactName)}`,
     );
     return normalizeArtifactResponse(response, artifactName);
   },
 
-  async patchArtifact(workflowId: string, stage: number | string, artifactName: string, payload: PatchArtifactPayload): Promise<Artifact> {
+  async patchArtifact(workflowId: string, stage: string, artifactName: string, payload: PatchArtifactPayload): Promise<Artifact> {
     const response = await apiRequest<unknown>(
       `/workflows/${workflowId}/stages/${toStageParam(stage)}/outputs/${toArtifactParam(artifactName)}`,
       {
@@ -115,21 +115,21 @@ export const workflowsService = {
     return normalizeArtifactResponse(response, artifactName);
   },
 
-  async generateQualityGate(workflowId: string, stage: number | string): Promise<QualityGate> {
+  async generateQualityGate(workflowId: string, stage: string): Promise<QualityGate> {
     return apiRequest<QualityGate>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/clarify`, {
       method: "POST",
       body: {},
     });
   },
 
-  async answerQualityGate(workflowId: string, stage: number | string, answers: QualityGateAnswer[]): Promise<QualityGate> {
+  async answerQualityGate(workflowId: string, stage: string, answers: QualityGateAnswer[]): Promise<QualityGate> {
     return apiRequest<QualityGate>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/clarify/answer`, {
       method: "POST",
       body: { answers },
     });
   },
 
-  async skipQualityGate(workflowId: string, stage: number | string, reason?: string): Promise<QualityGate> {
+  async skipQualityGate(workflowId: string, stage: string, reason?: string): Promise<QualityGate> {
     return apiRequest<QualityGate>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/clarify/skip`, {
       method: "POST",
       body: reason ? { reason } : {},

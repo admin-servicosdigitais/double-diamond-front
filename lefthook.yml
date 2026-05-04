@@ -1,0 +1,17 @@
+# lefthook.yml
+pre-commit:
+  commands:
+    typecheck:
+      run: npx tsc --noEmit
+    lint:
+      run: npm run lint
+
+commit-msg:
+  commands:
+    validate:
+      run: |
+        MSG=$(cat {1})
+        if ! echo "$MSG" | grep -qE "^(feat|fix|chore|docs|refactor|test|style)\("; then
+          echo "❌ Conventional Commits obrigatório: feat(escopo): descrição"
+          exit 1
+        fi

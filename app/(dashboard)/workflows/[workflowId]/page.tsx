@@ -1,5 +1,10 @@
-import { WorkflowDetailsView } from "@/features/workflows/components/workflow-details-view";
+import { WorkflowCockpitView } from "@/features/workflows/cockpit/workflow-cockpit-view";
 
-export default function WorkflowDetailsPage({ params }: { params: { workflowId: string } }) {
-  return <WorkflowDetailsView workflowId={params.workflowId} />;
+type Props = {
+  params: { workflowId: string };
+  searchParams?: { stage?: string };
+};
+
+export default function WorkflowDetailsPage({ params, searchParams }: Props) {
+  return <WorkflowCockpitView workflowId={params.workflowId} initialStageKey={searchParams?.stage} />;
 }

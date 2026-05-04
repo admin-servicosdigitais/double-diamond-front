@@ -14,11 +14,11 @@ export const domainQueryKeys = {
   agent: (agentId: string) => ["agents", agentId] as const,
   workflows: ["workflows"] as const,
   workflow: (workflowId: string) => ["workflows", workflowId] as const,
-  stage: (workflowId: string, stage: number | string) => ["workflows", workflowId, "stages", stage] as const,
-  stageOutputs: (workflowId: string, stage: number | string) => ["workflows", workflowId, "stages", stage, "outputs"] as const,
+  stage: (workflowId: string, stage: string) => ["workflows", workflowId, "stages", stage] as const,
+  stageOutputs: (workflowId: string, stage: string) => ["workflows", workflowId, "stages", stage, "outputs"] as const,
   latestAgentOutput: (workflowId: string, agentCode: string) =>
     ["workflows", workflowId, "agents", agentCode, "latest-output"] as const,
-  artifact: (workflowId: string, stage: number | string, artifactName: string) =>
+  artifact: (workflowId: string, stage: string, artifactName: string) =>
     ["workflows", workflowId, "stages", stage, "outputs", artifactName] as const,
 };
 
@@ -80,7 +80,7 @@ export function useWorkflowQuery(workflowId: string) {
   });
 }
 
-export function useStageQuery(workflowId: string, stage: number | string) {
+export function useStageQuery(workflowId: string, stage: string) {
   return useQuery({
     queryKey: domainQueryKeys.stage(workflowId, stage),
     queryFn: () => workflowsService.getStage(workflowId, stage),
@@ -89,11 +89,11 @@ export function useStageQuery(workflowId: string, stage: number | string) {
   });
 }
 
-export function useStageOutputsQuery(workflowId: string, stage: number | string) {
+export function useStageOutputsQuery(workflowId: string, stage: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: domainQueryKeys.stageOutputs(workflowId, stage),
     queryFn: async () => normalizeListResponse(await workflowsService.getStageOutputs(workflowId, stage)),
-    enabled: Boolean(workflowId && stage),
+    enabled: (options?.enabled ?? true) && Boolean(workflowId && stage),
     staleTime: DEFAULT_QUERY_STALE_TIME,
   });
 }
@@ -107,7 +107,7 @@ export function useLatestAgentOutputQuery(workflowId: string, agentCode: string)
   });
 }
 
-export function useArtifactQuery(workflowId: string, stage: number | string, artifactName: string) {
+export function useArtifactQuery(workflowId: string, stage: string, artifactName: string) {
   return useQuery({
     queryKey: domainQueryKeys.artifact(workflowId, stage, artifactName),
     queryFn: () => workflowsService.getArtifact(workflowId, stage, artifactName),
@@ -116,7 +116,7 @@ export function useArtifactQuery(workflowId: string, stage: number | string, art
   });
 }
 
-function invalidateWorkflowGraph(queryClient: ReturnType<typeof useQueryClient>, workflowId: string, stage: number | string) {
+function invalidateWorkflowGraph(queryClient: ReturnType<typeof useQueryClient>, workflowId: string, stage: string) {
   queryClient.invalidateQueries({ queryKey: domainQueryKeys.workflows });
   queryClient.invalidateQueries({ queryKey: domainQueryKeys.workflow(workflowId) });
   queryClient.invalidateQueries({ queryKey: domainQueryKeys.stage(workflowId, stage) });
@@ -127,7 +127,7 @@ export function useRunStageMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number | string }) => workflowsService.runStage(workflowId, stage),
+    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: string }) => workflowsService.runStage(workflowId, stage),
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
     retry: 0,
     meta: { friendlyError: getErrorMessage },
@@ -138,7 +138,7 @@ export function useApproveStageMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number | string }) =>
+    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: string }) =>
       workflowsService.approveStage(workflowId, stage),
     onSuccess: (_, vars) => invalidateWorkflowGraph(queryClient, vars.workflowId, vars.stage),
     retry: 0,
@@ -150,7 +150,7 @@ export function useNextStageMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ workflowId, stage, currentStage }: { workflowId: string; stage: number | string; currentStage?: Stage }) => {
+    mutationFn: async ({ workflowId, stage, currentStage }: { workflowId: string; stage: string; currentStage?: Stage }) => {
       if (currentStage?.status && currentStage.status !== "approved") {
         throw new Error("O estágio atual precisa estar aprovado antes de avançar.");
       }
@@ -174,7 +174,7 @@ export function usePatchArtifactMutation() {
       payload,
     }: {
       workflowId: string;
-      stage: number | string;
+      stage: string;
       artifactName: string;
       payload: PatchArtifactPayload;
     }) => workflowsService.patchArtifact(workflowId, stage, artifactName, payload),
@@ -189,7 +189,7 @@ export function usePatchArtifactMutation() {
 
 export function useGenerateQualityGateMutation() {
   return useMutation({
-    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: number | string }) =>
+    mutationFn: ({ workflowId, stage }: { workflowId: string; stage: string }) =>
       workflowsService.generateQualityGate(workflowId, stage),
     retry: 0,
     meta: { friendlyError: getErrorMessage },
@@ -198,7 +198,7 @@ export function useGenerateQualityGateMutation() {
 
 export function useAnswerQualityGateMutation() {
   return useMutation({
-    mutationFn: ({ workflowId, stage, answers }: { workflowId: string; stage: number | string; answers: QualityGateAnswer[] }) =>
+    mutationFn: ({ workflowId, stage, answers }: { workflowId: string; stage: string; answers: QualityGateAnswer[] }) =>
       workflowsService.answerQualityGate(workflowId, stage, answers),
     retry: 0,
     meta: { friendlyError: getErrorMessage },
@@ -207,7 +207,7 @@ export function useAnswerQualityGateMutation() {
 
 export function useSkipQualityGateMutation() {
   return useMutation({
-    mutationFn: ({ workflowId, stage, reason }: { workflowId: string; stage: number | string; reason?: string }) =>
+    mutationFn: ({ workflowId, stage, reason }: { workflowId: string; stage: string; reason?: string }) =>
       workflowsService.skipQualityGate(workflowId, stage, reason),
     retry: 0,
     meta: { friendlyError: getErrorMessage },

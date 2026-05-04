@@ -177,10 +177,12 @@ export function normalizeStage(payload: unknown, stageRef: string | number): Sta
 
 export function normalizeStageActionResponse(payload: unknown, workflowId: string, stageRef: string | number): StageActionResponse {
   const data = asRecord(payload);
+  const rawStage = asString(data.stage, String(stageRef));
 
   return {
     workflowId: asString(data.workflow_id, workflowId),
-    stage: toStageNumber(data.stage as string | number | undefined, toStageNumber(String(stageRef), 1)),
+    stage: toStageNumber(rawStage, toStageNumber(String(stageRef), 1)),
+    stageKey: rawStage,
     status: normalizeStageStatus(data.status),
     message: asString(data.compact_output_text) || asString(data.message),
   };

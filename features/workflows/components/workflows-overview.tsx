@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 
-import { AlertCircle, Plus, Workflow } from "lucide-react";
+import { Workflow } from "lucide-react";
 
 import { EmptyState, PremiumTableSkeleton, UXStateCard, WorkflowTable } from "@/components/system";
-import { Button } from "@/components/ui/button";
 import { useWorkflowsQuery } from "@/hooks/api/use-domain-queries";
 import { getNextActionLabel } from "@/lib/workflow/display";
 import type { WorkflowStatus } from "@/types/api/domain";
@@ -29,7 +27,6 @@ export function WorkflowsOverview() {
     return workflows.filter((workflow) => {
       const matchesStatus = selectedStatus === "all" || workflow.status === selectedStatus;
       if (!matchesStatus) return false;
-
       if (!normalizedSearch) return true;
 
       const fields = [workflow.name, workflow.id, workflow.description, getNextActionLabel(workflow)]
@@ -42,23 +39,7 @@ export function WorkflowsOverview() {
   }, [workflowsQuery.data, searchTerm, selectedStatus]);
 
   return (
-    <div className="space-y-5">
-      <section className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1>Workflows</h1>
-          <p className="text-sm text-muted-foreground">
-            Visualize, filtre e abra workflows rapidamente para manter o fluxo operacional em dia.
-          </p>
-        </div>
-
-        <Link href="/workflows/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo workflow
-          </Button>
-        </Link>
-      </section>
-
+    <div className="space-y-6">
       <WorkflowsFilters
         searchTerm={searchTerm}
         onSearchTermChange={setSearchTerm}
@@ -71,16 +52,16 @@ export function WorkflowsOverview() {
       ) : workflowsQuery.isError ? (
         <UXStateCard
           kind="error"
-          title="Não conseguimos carregar seus workflows agora"
-          description="Parece uma oscilação momentânea. Recarregue para restaurar a fila de execução e as prioridades do dia."
-          actionLabel="Recarregar workflows"
+          title="Não conseguimos carregar os workflows"
+          description="Recarregue para restaurar a fila de execução e as prioridades do dia."
+          actionLabel="Recarregar"
           onAction={() => workflowsQuery.refetch()}
         />
       ) : filteredWorkflows.length === 0 ? (
         <EmptyState
           icon={Workflow}
-          title="Nenhum workflow corresponde aos filtros atuais"
-          description="Refine os filtros para localizar um fluxo existente ou crie um novo workflow para começar a operar."
+          title="Nenhum workflow corresponde aos filtros"
+          description="Refine os filtros ou crie um novo workflow para começar."
           actionLabel="Limpar filtros"
           onAction={() => {
             setSearchTerm("");

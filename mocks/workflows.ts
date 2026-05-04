@@ -10,9 +10,9 @@ export const workflowsPlaceholder: Workflow[] = [
     updatedAt: "2026-04-13T11:00:00Z",
     currentStage: 2,
     stages: [
-      { stage: 1, name: "Discovery", status: "completed", requiresApproval: true },
-      { stage: 2, name: "Copy Estratégica", status: "awaiting_human_approval", requiresApproval: true },
-      { stage: 3, name: "Execução Multicanal", status: "not_started", requiresApproval: true },
+      { stage: 1, stageKey: "1-explorer", name: "Discovery", status: "completed", requiresApproval: true },
+      { stage: 2, stageKey: "2-intake", name: "Copy Estratégica", status: "awaiting_human_approval", requiresApproval: true },
+      { stage: 3, stageKey: "3-sourcing", name: "Execução Multicanal", status: "not_started", requiresApproval: true },
     ],
   },
 ];

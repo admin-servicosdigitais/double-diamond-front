@@ -23,7 +23,7 @@
     --destructive: 0 78% 52%;
     --destructive-foreground: 0 0% 98%;
     --ring: 221 69% 45%;
-    --radius: 0.95rem;
+    --radius: 0.625rem;
   }
 
   .dark {
@@ -54,19 +54,18 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image: radial-gradient(circle at top right, hsl(var(--primary) / 0.06), transparent 35%);
   }
 
   h1 {
-    @apply text-3xl font-semibold tracking-tight md:text-4xl;
+    @apply text-2xl font-semibold tracking-tight md:text-3xl;
   }
 
   h2 {
-    @apply text-2xl font-semibold tracking-tight;
+    @apply text-lg font-semibold tracking-tight;
   }
 
   h3 {
-    @apply text-lg font-semibold;
+    @apply text-base font-semibold;
   }
 }
 
@@ -77,5 +76,9 @@
 
   .surface-card {
     @apply rounded-xl border bg-card/95 shadow-sm;
+  }
+
+  .surface-soft {
+    @apply rounded-lg bg-muted/30 p-4;
   }
 }

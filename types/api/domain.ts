@@ -66,7 +66,7 @@ export interface StageOutput {
 
 export interface Stage {
   stage: number;
-  stageKey?: string;
+  stageKey: string;
   name?: string;
   status: StageStatus;
   optional?: boolean;
@@ -135,7 +135,10 @@ export interface CreateWorkflowPayload {
 
 export interface StageActionResponse {
   workflowId: string;
+  /** Número do estágio (somente para ordenação/UI). */
   stage: number;
+  /** Identificador canônico composto `<número>-<slug>` (ex: "2-intake"). Use este valor para todas as próximas chamadas de API. */
+  stageKey: string;
   status: StageStatus;
   message?: string;
 }
