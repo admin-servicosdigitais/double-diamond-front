@@ -260,8 +260,8 @@ export function ArtifactDetailsView({
     [outputsQuery.data, decodedArtifactName]
   );
 
-  const artifact = artifactQuery.data;
-  const content = artifact?.content ?? artifactOutput?.content ?? artifactOutput?.summary ?? "";
+  const artifactData = artifactQuery.data;
+  const content = artifactData?.content ?? artifactOutput?.content ?? artifactOutput?.summary ?? "";
   const hasUnsavedChanges = isEditing && (editedContent !== content || reason.trim().length > 0);
 
   useEffect(() => {
@@ -316,6 +316,8 @@ export function ArtifactDetailsView({
       />
     );
   }
+
+  const artifact = artifactQuery.data;
 
   const renderMode = detectRenderableMode(content, artifact.mimeType, artifact.name);
   const previewMode = detectRenderableMode(editedContent, artifact.mimeType, artifact.name);

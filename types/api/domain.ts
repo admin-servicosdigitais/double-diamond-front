@@ -77,6 +77,43 @@ export interface Stage {
   startedAt?: string;
   finishedAt?: string;
   outputs?: StageOutput[];
+  qualityGate?: QualityGate;
+}
+
+export interface QualityGateQuestion {
+  id: string;
+  question: string;
+  description?: string;
+  required?: boolean;
+  type?: string;
+  options?: string[];
+}
+
+export interface QualityGateRecommendation {
+  code: string;
+  label: string;
+  description?: string;
+  severity?: "low" | "medium" | "high" | "critical";
+}
+
+export interface QualityGateAnswer {
+  questionId: string;
+  answer: string;
+  justification?: string;
+}
+
+export interface QualityGate {
+  workflowId: string;
+  stage: number;
+  status?: "pending" | "answered" | "skipped" | "completed";
+  diagnosis?: string;
+  gaps?: string[];
+  questions: QualityGateQuestion[];
+  answers?: QualityGateAnswer[];
+  recommendation?: string;
+  recommendations?: QualityGateRecommendation[];
+  generatedAt?: string;
+  updatedAt?: string;
 }
 
 export interface Workflow {

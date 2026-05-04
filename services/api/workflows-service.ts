@@ -11,6 +11,8 @@ import type {
   Artifact,
   CreateWorkflowPayload,
   PatchArtifactPayload,
+  QualityGate,
+  QualityGateAnswer,
   Stage,
   StageActionResponse,
   StageOutput,
@@ -111,5 +113,26 @@ export const workflowsService = {
       },
     );
     return normalizeArtifactResponse(response, artifactName);
+  },
+
+  async generateQualityGate(workflowId: string, stage: number | string): Promise<QualityGate> {
+    return apiRequest<QualityGate>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/clarify`, {
+      method: "POST",
+      body: {},
+    });
+  },
+
+  async answerQualityGate(workflowId: string, stage: number | string, answers: QualityGateAnswer[]): Promise<QualityGate> {
+    return apiRequest<QualityGate>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/clarify/answer`, {
+      method: "POST",
+      body: { answers },
+    });
+  },
+
+  async skipQualityGate(workflowId: string, stage: number | string, reason?: string): Promise<QualityGate> {
+    return apiRequest<QualityGate>(`/workflows/${workflowId}/stages/${toStageParam(stage)}/clarify/skip`, {
+      method: "POST",
+      body: reason ? { reason } : {},
+    });
   },
 };

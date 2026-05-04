@@ -9,15 +9,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HumanApprovalDialog } from "@/features/workflows/components/human-approval-dialog";
 import {
+  useAnswerQualityGateMutation,
   useApproveStageMutation,
+  useGenerateQualityGateMutation,
   useNextStageMutation,
   useRunStageMutation,
+  useSkipQualityGateMutation,
   useStageOutputsQuery,
   useWorkflowQuery,
 } from "@/hooks/api/use-domain-queries";
+import { ApiError } from "@/services/api/client";
 import { formatWorkflowDate } from "@/lib/workflow/display";
 import { WORKFLOW_STAGE_BLUEPRINTS, getStageBlueprint, mergeStageWithBlueprint, parseStageOrder } from "@/lib/workflow/stages";
-import type { Stage } from "@/types/api/domain";
+import type { QualityGate, Stage } from "@/types/api/domain";
 
 type ConfirmAction = "approve" | "advance" | "rerun" | null;
 
@@ -80,10 +84,17 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   const [approvalNotes, setApprovalNotes] = useState("");
   const [humanReviewed, setHumanReviewed] = useState(false);
   const [justApproved, setJustApproved] = useState(false);
+  const [qualityGate, setQualityGate] = useState<QualityGate | null>(null);
+  const [qualityGateAnswers, setQualityGateAnswers] = useState<Record<string, string>>({});
+  const [qualityGateAnswered, setQualityGateAnswered] = useState(false);
+  const [qualityGateApprovalBlockedMessage, setQualityGateApprovalBlockedMessage] = useState<string | null>(null);
 
   const workflowQuery = useWorkflowQuery(workflowId);
   const runStageMutation = useRunStageMutation();
   const approveStageMutation = useApproveStageMutation();
+  const generateQualityGateMutation = useGenerateQualityGateMutation();
+  const answerQualityGateMutation = useAnswerQualityGateMutation();
+  const skipQualityGateMutation = useSkipQualityGateMutation();
   const nextStageMutation = useNextStageMutation();
 
   const workflow = workflowQuery.data;
@@ -115,6 +126,11 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
   const shouldShowApproveAction = canApprove && (awaitingHumanApproval || stage?.requiresApproval || stage?.stage === 7 || stage?.status === "running");
 
   const isMutating = runStageMutation.isPending || approveStageMutation.isPending || nextStageMutation.isPending;
+  const isGeneratingQualityGate = generateQualityGateMutation.isPending;
+  const isAnsweringQualityGate = answerQualityGateMutation.isPending;
+  const isSkippingQualityGate = skipQualityGateMutation.isPending;
+  const requiredQuestions = (qualityGate?.questions ?? []).filter((question) => question.required);
+  const optionalQuestions = (qualityGate?.questions ?? []).filter((question) => !question.required);
 
   const safeRunStage = async () => {
     if (!stage) return;
@@ -132,8 +148,16 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     try {
       await approveStageMutation.mutateAsync({ workflowId, stage: stage.stageKey ?? stage.stage });
       setJustApproved(true);
+      setQualityGateApprovalBlockedMessage(null);
       systemToast.success("Estágio aprovado", `Estágio ${stage.stage} aprovado com sucesso.`);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const blockedMessage =
+          "Este estágio possui perguntas obrigatórias pendentes. Responda o Quality Gate ou pule a análise antes de aprovar.";
+        setQualityGateApprovalBlockedMessage(blockedMessage);
+        systemToast.warning("Aprovação bloqueada", blockedMessage);
+        return;
+      }
       const message = error instanceof Error ? error.message : "Não foi possível registrar a aprovação agora.";
       systemToast.error("Erro ao aprovar", message);
       return;
@@ -141,6 +165,23 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     setHumanReviewed(false);
     setApprovalNotes("");
     setConfirmAction(null);
+  };
+
+  const skipQualityGate = async () => {
+    if (!stage) return;
+    try {
+      await skipQualityGateMutation.mutateAsync({
+        workflowId,
+        stage: stage.stageKey ?? stage.stage,
+        reason: "Aprovação manual sem análise detalhada.",
+      });
+      setQualityGateApprovalBlockedMessage(null);
+      setQualityGateAnswered(false);
+      systemToast.success("Análise pulada", "Análise pulada com sucesso. Clique em “Aprovar estágio” para confirmar manualmente.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível pular a análise neste momento.";
+      systemToast.error("Erro ao pular análise", message);
+    }
   };
 
   const advanceStage = async () => {
@@ -162,6 +203,50 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
     } catch (error) {
       const message = error instanceof Error ? error.message : "Falha ao avançar workflow.";
       systemToast.error("Erro ao avançar", message);
+    }
+  };
+
+  const analyzeBeforeApprove = async () => {
+    if (!stage) return;
+    try {
+      const response = await generateQualityGateMutation.mutateAsync({ workflowId, stage: stage.stageKey ?? stage.stage });
+      setQualityGate(response);
+      setQualityGateAnswers({});
+      setQualityGateAnswered(false);
+      systemToast.success("Análise gerada", "Quality Gate criado com sucesso para apoiar a decisão de aprovação.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível gerar análise neste momento.";
+      systemToast.error("Falha ao gerar análise", message);
+    }
+  };
+
+  const saveQualityGateAnswers = async () => {
+    if (!stage || !qualityGate) return;
+    const unansweredRequired = requiredQuestions.filter((question) => !qualityGateAnswers[question.id]?.trim());
+    if (unansweredRequired.length > 0) {
+      systemToast.warning("Respostas obrigatórias pendentes", "Preencha todas as perguntas obrigatórias antes de salvar.");
+      return;
+    }
+
+    try {
+      const answersPayload = qualityGate.questions
+        .map((question) => ({
+          questionId: question.id,
+          answer: qualityGateAnswers[question.id]?.trim() ?? "",
+        }))
+        .filter((answer) => answer.answer.length > 0);
+
+      const response = await answerQualityGateMutation.mutateAsync({
+        workflowId,
+        stage: stage.stageKey ?? stage.stage,
+        answers: answersPayload,
+      });
+      setQualityGate(response);
+      setQualityGateAnswered(true);
+      systemToast.success("Respostas salvas", "Perguntas do Quality Gate respondidas com sucesso.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível salvar respostas agora.";
+      systemToast.error("Erro ao salvar respostas", message);
     }
   };
 
@@ -336,10 +421,21 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
             </Link>
 
             {shouldShowApproveAction ? (
-              <Button className="w-full justify-start gap-2" onClick={() => setConfirmAction("approve")} disabled={isMutating || !stage8DependencyOk}>
+              <>
+                <Button
+                  className="w-full justify-start gap-2"
+                  variant="outline"
+                  onClick={analyzeBeforeApprove}
+                  disabled={isMutating || isGeneratingQualityGate || !stage8DependencyOk}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isGeneratingQualityGate ? "Analisando..." : "Analisar antes de aprovar"}
+                </Button>
+                <Button className="w-full justify-start gap-2" onClick={() => setConfirmAction("approve")} disabled={isMutating || !stage8DependencyOk}>
                 <CheckCircle2 className="h-4 w-4" />
                 Aprovar estágio
-              </Button>
+                </Button>
+              </>
             ) : null}
 
             <Button
@@ -366,6 +462,97 @@ export function StageDetailsView({ workflowId, stageId }: { workflowId: string; 
           </div>
         </SystemCard>
       </div>
+
+      {qualityGate ? (
+        <SystemCard
+          title="Painel Quality Gate"
+          description="Análise automática antes da aprovação humana. Envio de respostas ainda não habilitado nesta etapa."
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border p-3">
+              <p className="text-xs uppercase text-muted-foreground">Diagnóstico</p>
+              <p className="text-sm">{qualityGate.diagnosis ?? "Diagnóstico não informado pelo backend."}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-xs uppercase text-muted-foreground">Recomendação</p>
+              <p className="text-sm">{qualityGate.recommendation ?? qualityGate.recommendations?.[0]?.description ?? "Sem recomendação detalhada."}</p>
+            </div>
+            <div className="rounded-lg border p-3 md:col-span-2">
+              <p className="text-xs uppercase text-muted-foreground">Lacunas encontradas</p>
+              {(qualityGate.gaps ?? []).length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {(qualityGate.gaps ?? []).map((gap) => (
+                    <li key={gap}>• {gap}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhuma lacuna explicitada.</p>
+              )}
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-xs uppercase text-muted-foreground">Perguntas obrigatórias</p>
+              {requiredQuestions.length > 0 ? (
+                <ul className="mt-2 space-y-3 text-sm">
+                  {requiredQuestions.map((question) => (
+                    <li key={question.id} className="space-y-1">
+                      <p>• {question.question}</p>
+                      <textarea
+                        value={qualityGateAnswers[question.id] ?? ""}
+                        onChange={(event) =>
+                          setQualityGateAnswers((current) => ({ ...current, [question.id]: event.target.value }))
+                        }
+                        className="min-h-[92px] w-full rounded-md border bg-background p-2 text-sm"
+                        placeholder="Digite sua resposta obrigatória..."
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhuma pergunta obrigatória.</p>
+              )}
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-xs uppercase text-muted-foreground">Perguntas opcionais</p>
+              {optionalQuestions.length > 0 ? (
+                <ul className="mt-2 space-y-3 text-sm">
+                  {optionalQuestions.map((question) => (
+                    <li key={question.id} className="space-y-1">
+                      <p>• {question.question}</p>
+                      <textarea
+                        value={qualityGateAnswers[question.id] ?? ""}
+                        onChange={(event) =>
+                          setQualityGateAnswers((current) => ({ ...current, [question.id]: event.target.value }))
+                        }
+                        className="min-h-[92px] w-full rounded-md border bg-background p-2 text-sm"
+                        placeholder="Digite sua resposta opcional..."
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhuma pergunta opcional.</p>
+              )}
+            </div>
+            <div className="rounded-lg border p-3 md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium">{qualityGateAnswered ? "Perguntas respondidas" : "Perguntas pendentes de resposta"}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" onClick={skipQualityGate} disabled={isSkippingQualityGate}>
+                    {isSkippingQualityGate ? "Pulando..." : "Pular análise"}
+                  </Button>
+                  <Button onClick={saveQualityGateAnswers} disabled={isAnsweringQualityGate}>
+                    {isAnsweringQualityGate ? "Salvando..." : "Salvar respostas"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SystemCard>
+      ) : null}
+
+      {qualityGateApprovalBlockedMessage ? (
+        <AlertBanner tone="critical" title="Aprovação bloqueada pelo Quality Gate" description={qualityGateApprovalBlockedMessage} />
+      ) : null}
 
       {confirmAction === "approve" ? (
         <HumanApprovalDialog
